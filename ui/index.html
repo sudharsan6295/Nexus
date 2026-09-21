@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nexus</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <div class="topbar">
+      <div class="topbar-title">NEXUS</div>
+      <div class="tagline">See Where Your Time Goes</div>
+    </div>
+
+    <section class="hero">
+      <div class="hero-top">
+        <span>Time today</span>
+        <span class="hero-date" id="heroDate">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M2 6.5h12M5 1.5v3M11 1.5v3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <span id="dateLabel">Mon, 21 Sep</span>
+        </span>
+      </div>
+      <div id="todayValue">0m</div>
+      <div id="weekValue">This week 0m</div>
+    </section>
+
+    <div id="list" class="list"></div>
+
+    <div class="bottom-stack">
+      <button class="action" id="newToggle" type="button">
+        <span class="left"><span id="newToggleLabel">+   New category</span></span>
+      </button>
+      <div class="panel" id="newPanel">
+        <div class="row">
+          <input id="newName" type="text" placeholder="Category name" maxlength="80" />
+          <button class="primary" id="addBtn" type="button">Add</button>
+        </div>
+      </div>
+
+      <button class="action" id="notesToggle" type="button">
+        <span class="left"><span id="notesToggleLabel">Notes</span></span>
+        <span class="chevron">›</span>
+      </button>
+      <div class="panel" id="notesPanel">
+        <div class="note-tools">
+          <button class="ghost" id="stampBtn" type="button">Timestamp</button>
+          <button class="ghost" id="renameBtn" type="button">Rename</button>
+          <button class="ghost" id="deleteBtn" type="button">Delete</button>
+        </div>
+        <p class="session" id="sessionLine"></p>
+        <textarea id="notes" placeholder="Write a short note"></textarea>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <button id="analyticsBtn" type="button" title="Analytics" aria-label="Analytics">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 16V9h3v7H3zm5.5 0V4h3v12h-3zM14 16V7h3v9h-3z" fill="currentColor"/></svg>
+      </button>
+      <button id="settingsBtn" type="button" title="Settings" aria-label="Settings">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8.2 2.5h3.6l.4 2.1a5.8 5.8 0 0 1 1.5.9l2-.8 1.8 3.1-1.6 1.4c.1.4.1.8.1 1.2s0 .8-.1 1.2l1.6 1.4-1.8 3.1-2-.8a5.8 5.8 0 0 1-1.5.9l-.4 2.1H8.2l-.4-2.1a5.8 5.8 0 0 1-1.5-.9l-2 .8L2.5 13l1.6-1.4A6.3 6.3 0 0 1 4 10c0-.4 0-.8.1-1.2L2.5 7.4 4.3 4.3l2 .8a5.8 5.8 0 0 1 1.5-.9l.4-2.1zM10 7.6A2.4 2.4 0 1 0 10 12.4 2.4 2.4 0 0 0 10 7.6z" fill="currentColor"/></svg>
+      </button>
+      <span class="footer-note">One timer at a time</span>
+    </footer>
+  </div>
+
+  <div class="sheet" id="analyticsSheet">
+    <div class="sheet-card">
+      <div class="sheet-head">
+        <div>
+          <h3 id="analyticsTitle">Weekly analytics</h3>
+          <p id="analyticsSubtitle">Where your time went</p>
+        </div>
+        <button class="icon-btn" id="analyticsClose" type="button">✕</button>
+      </div>
+      <div class="range-tabs">
+        <button type="button" class="ghost active" data-analytics-range="week">Week</button>
+        <button type="button" class="ghost" data-analytics-range="month">Month</button>
+      </div>
+      <div class="analytics-total" id="analyticsTotal">0h</div>
+      <div id="analyticsBars" class="analytics-bars"></div>
+    </div>
+  </div>
+
+  <div class="sheet" id="settingsSheet">
+    <div class="sheet-card compact">
+      <div class="sheet-head">
+        <h3>Settings</h3>
+        <button class="icon-btn" id="settingsClose" type="button">✕</button>
+      </div>
+      <label class="toggle-row">
+        <span>
+          Stay on top
+          <small class="toggle-note">Keeps Nexus above other windows</small>
+        </span>
+        <input type="checkbox" id="pinToggle" />
+      </label>
+      <p class="hint">Starts compact. Drag any window edge or corner to make it smaller or larger — your size is remembered.</p>
+    </div>
+  </div>
+
+  <div class="sheet" id="minutesModal">
+    <div class="sheet-card compact">
+      <h3 id="minutesTitle">Adjust minutes</h3>
+      <p id="minutesCopy">Use +15 to add or -10 to remove</p>
+      <input id="minutesInput" type="text" inputmode="numeric" placeholder="e.g. 15 or -10" />
+      <div class="row end">
+        <button class="ghost" id="minutesCancel" type="button">Cancel</button>
+        <button class="primary" id="minutesConfirm" type="button">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet" id="renameModal">
+    <div class="sheet-card compact">
+      <h3>Rename category</h3>
+      <input id="renameInput" type="text" maxlength="80" />
+      <div class="row end">
+        <button class="ghost" id="renameCancel" type="button">Cancel</button>
+        <button class="primary" id="renameConfirm" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet" id="deleteModal">
+    <div class="sheet-card compact">
+      <h3>Delete category</h3>
+      <p id="deleteCopy">Delete this category and its tracked time?</p>
+      <div class="row end">
+        <button class="ghost" id="deleteCancel" type="button">Cancel</button>
+        <button class="danger" id="deleteConfirm" type="button">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
