@@ -1,0 +1,2047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Limelight – Project dashboard</title>
+<meta name="description" content="Personal project, timesheet, finance and team-mentoring dashboard. Runs entirely in your browser.">
+<meta name="theme-color" content="#0C3B42">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+:root{
+  --bg:#EDF0F3; --surface:#FFFFFF; --ink:#16232F; --muted:#5B6977; --line:#D7DEE5;
+  --brand:#0E5A63; --deep:#0C3B42; --lime:#CFE56B;
+  --ok:#23794B; --warn:#9A6609; --bad:#B53A34; --done:#66768A; --info:#2A62A8; --todo:#66768A;
+  --radius:10px;
+  font-family:"Segoe UI","Avenir Next","Helvetica Neue",Roboto,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0E1820; --surface:#15232D; --ink:#E6EDF2; --muted:#9DAEBC; --line:#273A49;
+    --brand:#1F7F8A; --ok:#4CC17F; --warn:#E0A63A; --bad:#EE7B73; --done:#8C9CAD; --info:#6FA7EC; --todo:#8C9CAD}
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-size:14px;line-height:1.45}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:1280px;margin:0 auto;padding:0 24px}
+:focus-visible{outline:2px solid var(--info);outline-offset:2px}
+
+/* header */
+.top{background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:24px;flex-wrap:wrap;padding-top:12px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:.2px}
+.brand i{width:14px;height:14px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 4px rgba(207,229,107,.35)}
+.brand small{font-weight:400;color:var(--muted);font-size:13px}
+.spacer{flex:1}
+.tabs{display:flex;gap:4px;width:100%;overflow-x:auto}
+.tab{background:none;border:0;padding:10px 14px;cursor:pointer;color:var(--muted);font-weight:600;border-bottom:3px solid transparent}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--lime)}
+
+/* buttons */
+.btn{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 13px;cursor:pointer;font-weight:600}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.danger{color:var(--bad)}
+.btn.sm{padding:3px 9px;font-size:12px}
+.link{background:none;border:0;padding:0;cursor:pointer;font-weight:650;text-align:left;color:var(--ink);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.link:hover{text-decoration-color:var(--brand)}
+
+main{padding:20px 0 40px}
+.hero{background:var(--deep);color:#fff;border-radius:14px;padding:26px 28px 0;margin-bottom:16px;overflow:hidden}
+.hero h1{margin:0;font-size:28px;line-height:1.2;font-weight:650;max-width:760px}
+.hero p{margin:6px 0 22px;color:#B9CDD1}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid rgba(255,255,255,.14);margin:0 -28px}
+.kpi{padding:16px 28px;border-right:1px solid rgba(255,255,255,.14)}
+.kpi:last-child{border-right:0}
+.kpi b{display:block;font-size:26px;font-weight:650;color:var(--lime);line-height:1.1}
+.kpi span{font-size:13px;color:#B9CDD1}
+
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+.s7{grid-column:span 7}.s5{grid-column:span 5}.s6{grid-column:span 6}.s12{grid-column:span 12}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;min-width:0}
+.panel h2{margin:0 0 12px;font-size:15px;font-weight:650;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.panel h2 span{font-weight:400;color:var(--muted);font-size:13px}
+.empty{color:var(--muted);padding:18px 4px}
+
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+.scroll{overflow-x:auto}
+.sub{color:var(--muted);font-size:12px;max-width:340px}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.acts{white-space:nowrap;text-align:right}
+.is-done td:first-child{color:var(--muted);text-decoration:line-through}
+
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:650;white-space:nowrap;
+  color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent)}
+.ok{--c:var(--ok)}.warn{--c:var(--warn)}.bad{--c:var(--bad)}.done{--c:var(--done)}.info{--c:var(--info)}.todo{--c:var(--todo)}
+.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;min-width:70px}
+.bar>i{display:block;height:100%;background:var(--brand)}
+.bar.over>i{background:var(--bad)}
+.late{color:var(--bad);font-weight:600}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--c)}
+.High{--c:var(--bad)}.Medium{--c:var(--warn)}.Low{--c:var(--done)}
+
+.stack{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--line);margin-bottom:12px}
+.stack i{display:block;background:var(--c)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--muted);font-size:13px}
+.legend b{color:var(--ink)}
+.rows{display:grid;gap:10px}
+.wl{display:grid;grid-template-columns:90px 1fr 70px;gap:10px;align-items:center}
+.wl .bar{height:10px}
+.due{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.due:last-child{border-bottom:0}
+.due small{display:block;color:var(--muted)}
+
+/* toolbar */
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.toolbar input,.toolbar select,.field input,.field select,.field textarea,select.inline{
+  background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+.toolbar input[type=search]{min-width:200px}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{background:var(--surface);border:0;padding:7px 13px;cursor:pointer;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+select.inline{padding:3px 6px;font-size:13px}
+
+/* board */
+.board{display:grid;grid-template-columns:repeat(4,minmax(220px,1fr));gap:12px;overflow-x:auto}
+.col{background:color-mix(in srgb,var(--line) 45%,transparent);border-radius:var(--radius);padding:10px;min-height:200px}
+.col.over{outline:2px dashed var(--brand)}
+.col h3{margin:2px 4px 10px;font-size:13px;display:flex;justify-content:space-between}
+.col h3 span{color:var(--muted);font-weight:400}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px;cursor:grab}
+.card.dragging{opacity:.4}
+.card p{margin:0 0 6px;font-weight:600}
+.card div{color:var(--muted);font-size:12px;display:flex;justify-content:space-between;gap:8px}
+
+/* timeline */
+.tl{min-width:760px}
+.tl-head,.tl-row{display:grid;grid-template-columns:200px 1fr}
+.tl-head{border-bottom:1px solid var(--line);height:26px}
+.tl-axis{position:relative}
+.tick{position:absolute;top:2px;font-size:12px;color:var(--muted);padding-left:6px;border-left:1px solid var(--line);height:24px}
+.tl-row{border-bottom:1px solid var(--line)}
+.tl-label{padding:8px 8px 8px 0;display:flex;flex-direction:column;justify-content:center}
+.tl-label span{color:var(--muted);font-size:12px}
+.tl-track{position:relative;height:50px;background-image:linear-gradient(to right,var(--line) 1px,transparent 1px);background-size:calc(100%/12) 100%}
+.tl-today{position:absolute;top:0;bottom:0;width:2px;background:var(--lime);box-shadow:0 0 0 1px rgba(0,0,0,.25);z-index:2}
+.tl-bar{position:absolute;top:8px;height:22px;border-radius:6px;border:1px solid var(--c);background:color-mix(in srgb,var(--c) 20%,var(--surface));overflow:hidden}
+.tl-bar i{position:absolute;left:0;top:0;bottom:0;background:var(--c);opacity:.85}
+.tl-bar span{position:relative;font-size:11px;font-weight:700;padding-left:6px;line-height:20px;color:var(--ink);mix-blend-mode:normal}
+.tl-ms{position:absolute;top:34px;width:11px;height:11px;transform:translateX(-50%) rotate(45deg);background:var(--ink);border:0;padding:0;cursor:pointer;z-index:3}
+.tl-ms.done{background:var(--ok)}
+
+/* timesheet */
+table.ts th,table.ts td{text-align:center}
+table.ts th:first-child,table.ts td:first-child{text-align:left}
+.ts input{width:62px;text-align:center;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 4px}
+.ts .wknd{background:color-mix(in srgb,var(--line) 35%,transparent)}
+.ts th.today{box-shadow:inset 0 -3px 0 var(--lime);color:var(--ink)}
+.ts tfoot td{font-weight:650;border-top:2px solid var(--line);border-bottom:0}
+.weeknav{display:flex;gap:6px;align-items:center}
+.weeknav b{min-width:180px;text-align:center}
+
+/* finances */
+.fin{display:grid;grid-template-columns:repeat(5,1fr);padding:18px 0}
+.fin>div{padding:2px 20px;border-right:1px solid var(--line)}
+.fin>div:last-child{border-right:0}
+.fin b{display:block;font-size:22px;font-weight:650;font-variant-numeric:tabular-nums}
+.fin span{color:var(--muted);font-size:13px}
+input.rate{width:104px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:5px 8px;text-align:right}
+tfoot.tot td{font-weight:650;border-top:2px solid var(--line);border-bottom:0}
+.neg{color:var(--bad);font-weight:600}
+@media (max-width:900px){.fin{grid-template-columns:repeat(2,1fr);gap:12px 0}.weeknav b{min-width:0}}
+
+/* storage status */
+.fs{background:none;border:0;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fs.warn{color:var(--warn);font-weight:600}
+.banner{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;background:color-mix(in srgb,var(--warn) 14%,var(--surface));border:1px solid var(--warn);border-radius:10px;padding:10px 14px;margin-bottom:14px}
+.banner[hidden]{display:none}
+.fspanel{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.fspanel p{margin:6px 0 10px;max-width:none}
+
+/* allocation plan */
+table.plan{min-width:max-content}
+.plan th,.plan td{padding:6px 6px;text-align:center;white-space:nowrap}
+.plan .s1,.plan .s2{position:sticky;background:var(--surface);z-index:1;text-align:left}
+.plan .s1{left:0;min-width:104px}
+.plan .s2{left:104px;min-width:120px;box-shadow:1px 0 0 var(--line)}
+.plan th.wk,.plan td.pl{border-left:2px solid var(--line)}
+.plan th.sh{font-weight:500}
+.plan th.today{box-shadow:inset 0 -3px 0 var(--lime);color:var(--ink)}
+.plan input{width:58px;text-align:center;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:5px 3px}
+.plan td.ac input{background:color-mix(in srgb,var(--lime) 24%,var(--surface))}
+.plan tfoot td{font-weight:650;border-top:2px solid var(--line);border-bottom:0}
+.toolbar .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap;cursor:pointer;user-select:none}
+.toolbar .chk input{accent-color:var(--brand)}
+
+/* mentoring */
+.toolbar .seg{overflow-x:auto;max-width:100%}
+.entry{padding:12px 0;border-bottom:1px solid var(--line)}
+.entry:last-child{border-bottom:0}
+.entry h4{margin:0 0 4px;font-size:14px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.entry h4 small{font-weight:400;color:var(--muted);margin-left:6px}
+.entry p{margin:0;white-space:pre-wrap}
+.act{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;padding:9px 0;border-bottom:1px solid var(--line)}
+.act:last-child{border-bottom:0}
+.act small{display:block;color:var(--muted)}
+.act.is-done strong{color:var(--muted);text-decoration:line-through}
+.lvl{display:inline-flex;gap:4px;vertical-align:middle}
+.lvl i{width:12px;height:12px;border-radius:3px;background:var(--line)}
+.lvl i.on{background:var(--brand)}
+.lvl i.tg{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink)}
+td.heat{text-align:center;min-width:76px}
+.out{box-shadow:inset 0 -3px 0 var(--warn)}
+.wrap-text{white-space:pre-wrap;max-width:520px}
+/* weekday absence calendar */
+.cal-wrap{max-width:640px}
+.cal-nav{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.cal-nav b{flex:1;text-align:center;font-size:15px}
+.cal-legend{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 12px;font-size:12px;color:var(--muted)}
+.cal-legend i{display:inline-block;width:14px;height:14px;border-radius:4px;border:1px solid var(--line);vertical-align:middle;margin-right:5px}
+.cal-legend i.abs{background:color-mix(in srgb,var(--warn) 35%,var(--surface));border-color:var(--warn)}
+.cal-legend i.hol{background:color-mix(in srgb,var(--bad) 28%,var(--surface));border-color:var(--bad)}
+table.cal{width:100%;border-collapse:separate;border-spacing:6px;table-layout:fixed}
+table.cal th{font-size:12px;font-weight:600;color:var(--muted);text-align:center;padding:4px}
+table.cal td{padding:0;height:52px}
+table.cal button.cal-day{width:100%;height:52px;border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer;font:inherit;color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px}
+table.cal button.cal-day:hover{border-color:var(--brand)}
+table.cal button.cal-day.today{box-shadow:inset 0 -3px 0 var(--lime)}
+table.cal button.cal-day.abs{background:color-mix(in srgb,var(--warn) 32%,var(--surface));border-color:var(--warn)}
+table.cal button.cal-day.hol{background:color-mix(in srgb,var(--bad) 26%,var(--surface));border-color:var(--bad)}
+table.cal button.cal-day small{font-size:10px;font-weight:650;text-transform:uppercase;letter-spacing:.02em;color:var(--muted)}
+table.cal button.cal-day.abs small,table.cal button.cal-day.hol small{color:inherit}
+table.cal button.cal-day.locked{cursor:default;opacity:.92}
+table.cal button.cal-day.locked:hover{border-color:var(--bad)}
+table.cal td.empty{background:transparent}
+.cap-over{background:color-mix(in srgb,var(--bad) 18%,var(--surface));color:var(--bad);font-weight:700}
+.cap-hot{background:color-mix(in srgb,var(--warn) 16%,var(--surface))}
+.pin-btn{background:none;border:0;cursor:pointer;font-size:16px;line-height:1;padding:2px 6px;color:var(--muted)}
+.pin-btn.on{color:var(--brand)}
+.dense input.inline-date{padding:4px 6px;font-size:12px;max-width:132px}
+.mine-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.mine-grid b{display:block;font-size:20px;font-weight:650}
+.mine-grid span{color:var(--muted);font-size:12px}
+@media (max-width:900px){.mine-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* dialog */
+dialog{border:0;border-radius:14px;padding:0;width:min(580px,94vw);background:var(--surface);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(10,20,28,.55)}
+dialog form,.dlg{padding:22px}
+dialog h2{margin:0 0 14px;font-size:18px}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field.wide{grid-column:1/-1}
+.field label{font-size:12px;font-weight:600;color:var(--muted)}
+.dlg-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.datalist{display:grid;gap:8px}
+.datalist .btn{text-align:left}
+.datalist small{display:block;font-weight:400;color:var(--muted)}
+
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50;max-width:92vw}
+#toast.show{opacity:1}
+.foot{color:var(--muted);font-size:12px;margin-top:20px}
+
+@media (max-width:900px){
+  .s7,.s5,.s6{grid-column:span 12}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .kpi{border-bottom:1px solid rgba(255,255,255,.14)}
+  .fields{grid-template-columns:1fr}
+  .wrap{padding:0 14px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><i></i>Limelight <small>Project dashboard</small></div>
+    <div class="spacer"></div>
+    <button class="fs" id="fileStatus" data-act="data" title="Where your data is saved"></button>
+    <button class="btn" data-act="data">Data and backup</button>
+    <nav class="tabs" role="tablist" aria-label="Views">
+      <button class="tab" role="tab" data-tab="overview">Overview</button>
+      <button class="tab" role="tab" data-tab="projects">Projects</button>
+      <button class="tab" role="tab" data-tab="tasks">Tasks</button>
+      <button class="tab" role="tab" data-tab="timesheet">Timesheet</button>
+      <button class="tab" role="tab" data-tab="absences">Absences</button>
+      <button class="tab" role="tab" data-tab="capacity">Capacity</button>
+      <button class="tab" role="tab" data-tab="timeline">Timeline</button>
+      <button class="tab" role="tab" data-tab="finances">Finances</button>
+      <button class="tab" role="tab" data-tab="risks">Risks</button>
+      <button class="tab" role="tab" data-tab="mentoring">Mentoring</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="fileBanner" class="banner" role="alert" hidden></div>
+  <div id="view"></div>
+  <p class="foot">Your data is saved in this browser. In Chrome or Edge you can also point it at a file you choose (see “Data and backup”) so it syncs through OneDrive, Google Drive or Dropbox. <span>Limelight v1.6.2</span></p>
+</main>
+
+<dialog id="dlg" aria-labelledby="dlgTitle"></dialog>
+<dialog id="dataDlg" aria-labelledby="dataTitle">
+  <div class="dlg">
+    <h2 id="dataTitle">Data and backup</h2>
+    <div id="fsPanel" class="fspanel"></div>
+    <div class="datalist">
+      <button class="btn" data-act="export-json">Export backup (JSON)<small>Everything: projects, tasks, risks and milestones.</small></button>
+      <button class="btn" data-act="import-json">Import backup (JSON)<small>Replaces the data on this computer with the backup file.</small></button>
+      <button class="btn" data-act="export-csv">Export tasks (CSV)<small>Opens in Excel or Google Sheets.</small></button>
+      <button class="btn" data-act="export-time">Export allocation plan (CSV)<small>Every resource and week with plan %, planned and actual hours, and cost.</small></button>
+      <button class="btn" data-act="export-exp">Export expenses (CSV)<small>Every expense with project, date, category and amount.</small></button>
+      <button class="btn" data-act="export-month">Export one month (CSV)<small>Hours by person and project for a month you choose.</small></button>
+      <button class="btn" data-act="import-csv">Import tasks (CSV)<small>Columns: project, title, owner, status, priority, due (YYYY-MM-DD), notes. New project names are created automatically.</small></button>
+      <button class="btn" data-act="backup-now">Download daily backup now<small>Also saved automatically once per day in this browser (last 14 days).</small></button>
+      <button class="btn" data-act="backup-list">Restore an auto-backup<small>Pick from the last daily snapshots kept in this browser.</small></button>
+      <button class="btn" data-act="sample">Load sample data<small>Replaces current data with a demo project set.</small></button>
+      <button class="btn danger" data-act="clear">Clear all data<small>Removes everything from this browser.</small></button>
+    </div>
+    <div class="dlg-actions"><button class="btn" data-act="close-data">Close</button></div>
+  </div>
+</dialog>
+<datalist id="ownerlist"></datalist>
+<datalist id="catlist"></datalist>
+<input type="file" id="fileJson" accept=".json,application/json" hidden>
+<input type="file" id="fileCsv" accept=".csv,text/csv" hidden>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- helpers ---------- */
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const iso=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*60000);return z.toISOString().slice(0,10)};
+const today=iso(new Date());
+const addDays=(s,n)=>{const d=new Date(s+'T00:00:00');d.setDate(d.getDate()+n);return iso(d)};
+const monday=d=>{const x=new Date(d+'T00:00:00');return addDays(d,-((x.getDay()+6)%7))};
+const diffDays=(a,b)=>Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/864e5);
+const fmt=s=>s?new Date(s+'T00:00:00').toLocaleDateString(undefined,{day:'numeric',month:'short'}):'–';
+const fmtY=s=>s?new Date(s+'T00:00:00').toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}):'–';
+const rel=d=>{if(!d)return'';const n=diffDays(today,d);return n<0?(-n)+'d overdue':n===0?'Today':n===1?'Tomorrow':'In '+n+' days'};
+const nf=n=>Number(n||0).toLocaleString();
+const uid=()=>Math.random().toString(36).slice(2,9);
+
+const TASK_STATUS=['To do','In progress','Blocked','Done'];
+const PRIORITY=['High','Medium','Low'];
+const PROJ_STATUS=['On track','At risk','Off track','Done'];
+const RISK_STATUS=['Open','Mitigated','Closed'];
+const EXP_CATS=['Contractor','Software','Hardware','Travel','Training','Other'];
+const CAD={Weekly:7,Fortnightly:14,Monthly:30};
+const M_TABS=[['team','Team'],['oneonones','1:1s and actions'],['growth','Growth'],['feedback','Feedback']];
+const AREAS=['Technical','Leadership','Communication','Delivery','Career'];
+const GOAL_STATUS=['In progress','On hold','Achieved'];
+const FB_TYPES=['Recognition','Constructive','Coaching tip'];
+const LEAVE_TYPES=['Leave','Holiday','Training','Other'];
+const LVL5=[[1,'1 Beginner'],[2,'2 Developing'],[3,'3 Proficient'],[4,'4 Advanced'],[5,'5 Expert']];
+const LEVEL=[[1,'Low'],[2,'Medium'],[3,'High']];
+const SC={'On track':'ok','At risk':'warn','Off track':'bad','Done':'done','To do':'todo','In progress':'info','Blocked':'bad','Open':'warn','Mitigated':'ok','Closed':'done'};
+Object.assign(SC,{'Recognition':'ok','Constructive':'warn','Coaching tip':'info','On hold':'warn','Achieved':'ok'});
+const pill=s=>'<span class="pill '+(SC[s]||'done')+'">'+esc(s)+'</span>';
+
+/* ---------- state ---------- */
+const KEY='limelight-pm-v1';
+let storageWarned=false;
+function sampleBase(){
+  const d=n=>addDays(today,n);
+  const T=(id,projectId,title,owner,status,priority,due)=>({id,projectId,title,owner,status,priority,due,notes:''});
+  return {
+    projects:[
+      {id:'p1',name:'Website relaunch',owner:'Priya',status:'On track',start:d(-40),end:d(35),budget:65000,spent:8000,currency:'INR',notes:'New CMS and refreshed brand pages.'},
+      {id:'p2',name:'Mobile app v2',owner:'Daniel',status:'At risk',start:d(-60),end:d(50),budget:160000,spent:30000,currency:'USD',notes:'Payment SDK upgrade is the critical path.'},
+      {id:'p3',name:'Vendor onboarding',owner:'Mei',status:'Off track',start:d(-25),end:d(12),budget:15000,spent:0,currency:'EUR',notes:'Waiting on legal sign-off.'},
+      {id:'p4',name:'Security audit',owner:'Carlos',status:'Done',start:d(-90),end:d(-15),budget:22000,spent:20400,currency:'USD',notes:''}
+    ],
+    tasks:[
+      T('t1','p1','Finalize sitemap','Priya','Done','High',d(-30)),
+      T('t2','p1','Migrate blog content','Mei','In progress','Medium',d(6)),
+      T('t3','p1','Design homepage hero','Carlos','In progress','High',d(2)),
+      T('t4','p1','Set up redirects','Priya','To do','Medium',d(14)),
+      T('t5','p1','Accessibility review','Daniel','To do','Low',d(24)),
+      T('t6','p2','Upgrade payment SDK','Daniel','Blocked','High',d(-3)),
+      T('t7','p2','Push notification flow','Mei','In progress','Medium',d(9)),
+      T('t8','p2','Beta release to testers','Daniel','To do','High',d(20)),
+      T('t9','p2','Fix onboarding crash','Carlos','Done','High',d(-10)),
+      T('t10','p2','App store assets','Priya','To do','Low',d(30)),
+      T('t11','p3','Collect vendor tax forms','Mei','In progress','High',d(-5)),
+      T('t12','p3','Legal review of contracts','Mei','Blocked','High',d(-1)),
+      T('t13','p3','Set up supplier portal access','Carlos','To do','Medium',d(5)),
+      T('t14','p3','Kick-off call with vendors','Priya','Done','Medium',d(-14)),
+      T('t15','p4','Close out findings report','Carlos','Done','Medium',d(-16)),
+      T('t16','p1','Write test plan','Lena','In progress','Medium',d(4)),
+      T('t17','p2','Refactor settings screen','Arjun','To do','Medium',d(12)),
+      T('t18','p2','Analytics event mapping','Wei','In progress','High',d(3)),
+      T('t19','p3','Vendor data cleanup','Aisha','To do','Medium',d(6)),
+      T('t20','p1','API integration for forms','Tomas','In progress','High',d(8)),
+      T('t21','p2','Regression suite','Lena','To do','High',d(10)),
+      T('t22','p3','Supplier onboarding docs','Tomas','To do','Low',d(9))
+    ],
+    risks:[
+      {id:'r1',projectId:'p2',title:'Payment SDK breaking changes delay release',owner:'Daniel',impact:3,likelihood:3,status:'Open',mitigation:'Pair with vendor engineer; freeze scope.'},
+      {id:'r2',projectId:'p3',title:'Legal sign-off slips past go-live',owner:'Mei',impact:3,likelihood:2,status:'Open',mitigation:'Escalate to sponsor weekly.'},
+      {id:'r3',projectId:'p1',title:'Content migration quality issues',owner:'Priya',impact:2,likelihood:2,status:'Open',mitigation:'Sample audit after each batch.'},
+      {id:'r4',projectId:'p2',title:'Key developer on leave in final month',owner:'Daniel',impact:2,likelihood:1,status:'Mitigated',mitigation:'Cross-train a second developer.'}
+    ],
+    milestones:[
+      {id:'m1',projectId:'p1',title:'Design sign-off',date:d(-8),done:true},
+      {id:'m2',projectId:'p1',title:'Go-live',date:d(35),done:false},
+      {id:'m3',projectId:'p2',title:'Beta',date:d(20),done:false},
+      {id:'m4',projectId:'p2',title:'Store submission',date:d(45),done:false},
+      {id:'m5',projectId:'p3',title:'Contracts signed',date:d(10),done:false}
+    ]
+  };
+}
+function sample(){
+  const s=normalize(sampleBase());
+  const R=(id,projectId,category,name,rate,hpw,base)=>({r:{id,projectId,category,name,rate,hpw},base});
+  const defs=[
+    R('r1','p1','Development','Daniel',75,45,20),R('r2','p1','Development','Mei',50,45,30),R('r3','p1','Design','Carlos',65,45,20),R('r4','p1','PM','Priya',60,45,20),
+    R('r5','p2','Development','Daniel',75,45,70),R('r6','p2','Development','Mei',50,45,30),R('r7','p2','Development','Carlos',65,45,30),R('r8','p2','Infra','Lena',50,40,20),R('r9','p2','PM','Priya',60,45,20),
+    R('r10','p3','Development','Mei',50,45,30),R('r11','p3','Development','Carlos',65,45,25),R('r12','p3','PM','Priya',60,45,20)
+  ];
+  const wkNow=monday(today);
+  defs.forEach((d,ri)=>{
+    const pr=s.projects.find(x=>x.id===d.r.projectId);s.resources.push(d.r);
+    weeksOf(pr).forEach((w,wi)=>{
+      const pct=Math.max(10,Math.min(100,d.base+(((wi+ri)%3)-1)*10)),a={pct};
+      if(w.key<wkNow)a.actual=Math.round(pct/100*d.r.hpw*[1,0.9,1.1,1,0.95,1.15][(wi+ri)%6]*2)/2;
+      else if(w.key===wkNow)a.actual=Math.round(pct/100*d.r.hpw*0.5*2)/2;
+      s.alloc[d.r.id+'|'+w.key]=a;
+    });
+  });
+  const E=(projectId,category,description,amount,day)=>({id:uid(),projectId,category,description,amount,date:addDays(today,day)});
+  s.expenses=[
+    E('p1','Software','CMS licence (annual)',9600,-35),E('p1','Contractor','Copywriter, 3 weeks',6000,-20),E('p1','Training','CMS admin workshop',1800,-12),
+    E('p2','Contractor','Payment SDK specialist',38000,-28),E('p2','Software','Device test cloud',7200,-18),E('p2','Hardware','Test devices',5400,-40),
+    E('p3','Travel','Vendor site visit',2300,-9),E('p3','Other','Legal review fees',3500,-4)
+  ];
+  const M=(id,name,role,cadence,since)=>({id,name,role,cadence,since:addDays(today,since),notes:''});
+  s.mentees=[M('m1','Priya','Senior Consultant','Weekly',-900),M('m2','Daniel','Developer','Fortnightly',-600),M('m3','Mei','Business Analyst','Weekly',-420),M('m4','Carlos','Designer','Fortnightly',-300),M('m5','Arjun','Junior Developer','Weekly',-120),M('m6','Lena','QA Engineer','Monthly',-500),M('m7','Tomas','Developer','Fortnightly',-250),M('m8','Aisha','Consultant','Weekly',-80),M('m9','Wei','Data Analyst','Monthly',-700)];
+  const O=(m,off,notes)=>({id:uid(),menteeId:m,date:addDays(today,off),notes});
+  s.oneonones=[
+    O('m1',-5,'Feels stretched at the moment. Wants more client-facing time.\nAgreed she will shadow the steering call next sprint.'),
+    O('m1',-12,'Talked through feedback from the design review. Pacing feels good.'),
+    O('m2',-12,'Ongoing blockers are weighing on him. Agreed to escalate an access request.\nDiscussed moving toward tech lead scope.'),
+    O('m3',-9,'Stretched across three projects. Will drop one recurring meeting.'),
+    O('m4',-20,'Interested in UX research. Suggested a small usability study on the app.'),
+    O('m5',-3,'Settling in well. Needs help scoping tasks; try breaking work into half-day pieces.'),
+    O('m5',-10,'First month check-in. Clear on expectations.'),
+    O('m6',-25,'Wants to grow into test automation. Agreed on a learning plan.'),
+    O('m7',-16,'Struggling with code review turnaround. Pair on reviews this week.'),
+    O('m8',-8,'Preparing her first client workshop. Rehearsed the agenda.'),
+    O('m9',-30,'Interested in moving from reporting to modelling work.')];
+  const A=(m,text,owner,due,done)=>({id:uid(),menteeId:m,text,owner,due:addDays(today,due),done:!!done});
+  s.actions=[A('m1','Share steering call invite','Me',-1),A('m2','Request vendor access escalation','Me',2),A('m2','Draft tech lead development outline','Mentee',10),A('m3','Drop weekly sync with ops','Mentee',-2),A('m4','Plan usability study scope','Mentee',9),A('m5','Break next task into half-day pieces','Mentee',3),A('m6','Send test automation course links','Me',4),A('m7','Pair on two code reviews','Me',2),A('m8','Share workshop template','Me',1),A('m9','Introduce to modelling lead','Me',6),A('m1','Add client-facing goal to growth plan','Me',-6,true)];
+  const G=(m,title,area,t,progress,status)=>({id:uid(),menteeId:m,title,area,target:addDays(today,t),progress,status});
+  s.goals=[G('m1','Lead a client workshop','Leadership',30,40,'In progress'),G('m1','Mentor a junior consultant','Leadership',90,10,'In progress'),G('m2','Move into tech lead scope','Career',120,25,'In progress'),G('m3','Improve stakeholder communication','Communication',45,60,'In progress'),G('m4','Run a usability study','Technical',60,15,'In progress'),G('m5','Own a small feature end to end','Delivery',75,35,'In progress'),G('m6','Build a UI test automation suite','Technical',100,20,'In progress'),G('m7','Cut code review turnaround to one day','Delivery',30,50,'In progress'),G('m8','Deliver first client workshop','Communication',14,70,'In progress'),G('m9','Build a forecasting model','Technical',110,5,'On hold'),G('m3','Complete business analysis prep module','Career',-10,100,'Achieved')];
+  const K=(m,skill,level,target)=>({id:uid(),menteeId:m,skill,level,target});
+  s.skills=[K('m1','Client facilitation',3,4),K('m1','Solution design',4,5),K('m2','System design',3,4),K('m2','Stakeholder management',2,3),K('m3','Requirements analysis',4,4),K('m3','Stakeholder management',3,4),K('m4','UX research',2,4),K('m5','Backend development',2,3),K('m6','Test automation',2,4),K('m7','Code review',3,4),K('m8','Presentation',2,4),K('m9','Statistical modelling',2,4)];
+  const F=(m,off,type,text)=>({id:uid(),menteeId:m,date:addDays(today,off),type,text});
+  s.feedback=[F('m1',-6,'Recognition','Handled a tense client call calmly and kept the plan on track.'),F('m2',-14,'Recognition','Stepped in to unblock the payment flow outside his remit.'),F('m3',-30,'Constructive','Status updates were late twice. Agreed on a Friday cut-off.'),F('m5',-4,'Coaching tip','Ask for review earlier on larger changes.'),F('m7',-20,'Constructive','Pull requests are large. Try smaller increments.'),F('m8',-9,'Recognition','Clear, well-structured workshop prep.'),F('m4',-70,'Recognition','Strong design handoff notes for the web team.'),F('m6',-45,'Coaching tip','Capture flaky test patterns in a shared doc.')];
+  const L=(m,type,a,b)=>({id:uid(),menteeId:m,type,start:addDays(today,a),end:addDays(today,b)});
+  s.leave=[L('m1','Leave',6,10),L('m3','Training',2,3),L('m9','Leave',-1,1),L('m6','Holiday',20,21),L('m2','Leave',14,16)];
+  s.timeOff=[];
+  return s;
+}
+function load(){
+  try{const r=localStorage.getItem(KEY);if(r){const s=JSON.parse(r);if(s&&s.projects)return normalize(s)}}catch(e){}
+  return sample();
+}
+const CURRENCY_OPTS=[['','Plain numbers'],['INR','INR (₹)'],['USD','USD ($)'],['EUR','EUR (€)'],['GBP','GBP (£)'],['AUD','AUD (A$)'],['CAD','CAD (C$)'],['SGD','SGD (S$)'],['AED','AED'],['SEK','SEK (kr)'],['NOK','NOK (kr)'],['DKK','DKK (kr)'],['JPY','JPY (¥)']];
+function normalize(s){
+  const settings=Object.assign({currency:'',pinned:[],myName:'',templates:[],lastAutoBackup:'',regions:[],personRegion:{}},s.settings||{});
+  if(!Array.isArray(settings.pinned))settings.pinned=[];
+  if(!Array.isArray(settings.templates))settings.templates=[];
+  settings.myName=String(settings.myName||'');
+  if(!Array.isArray(settings.regions)||!settings.regions.length)
+    settings.regions=[{id:'india',name:'India'},{id:'sweden',name:'Sweden'}];
+  else{
+    settings.regions=settings.regions.map(r=>{
+      const id=String(r.id||uid()),name=String(r.name||'Region').trim()||'Region';
+      if(id==='default'||name.toLowerCase()==='default')return{id:'india',name:'India'};
+      return{id,name};
+    });
+    const seen=new Set();settings.regions=settings.regions.filter(r=>{if(seen.has(r.id))return false;seen.add(r.id);return true});
+    if(!settings.regions.some(r=>r.id==='india'))settings.regions.unshift({id:'india',name:'India'});
+    if(!settings.regions.some(r=>r.id==='sweden'))settings.regions.push({id:'sweden',name:'Sweden'});
+  }
+  if(!settings.personRegion||typeof settings.personRegion!=='object')settings.personRegion={};
+  const regionIds=new Set(settings.regions.map(r=>r.id));
+  const fixRegion=id=>{const x=String(id||'india');return x==='default'?'india':(regionIds.has(x)?x:'india')};
+  Object.keys(settings.personRegion).forEach(k=>{settings.personRegion[k]=fixRegion(settings.personRegion[k])});
+  const legacyCur=settings.currency||'';
+  const projects=(s.projects||[]).map(p=>{
+    const o=Object.assign({},p);
+    o.budgetEnd=o.budgetEnd||'';
+    if(o.currency==null||o.currency===undefined)o.currency=legacyCur;
+    o.currency=String(o.currency||'');
+    if(o.pinned&&!settings.pinned.includes(o.id))settings.pinned.push(o.id);
+    delete o.pinned;
+    return o;
+  });
+  const mentees=s.mentees||[];
+  const nameOf=id=>{const m=mentees.find(x=>x.id===id);return m?(m.name||'').trim():''};
+  const resources=(s.resources||[]).map(r=>{
+    const o=Object.assign({},r);
+    o.holidayRegion=fixRegion(o.holidayRegion||settings.personRegion[(o.name||'').trim().toLowerCase()]||'india');
+    const nk=(o.name||'').trim().toLowerCase();if(nk)settings.personRegion[nk]=o.holidayRegion;
+    return o;
+  });
+  let timeOff=[];
+  (Array.isArray(s.timeOff)?s.timeOff:[]).forEach(t=>{
+    if(!t||!t.date)return;
+    let person=(t.person!=null?t.person:'').trim();
+    if(!person&&t.scope==='mentee')person=nameOf(t.refId||t.menteeId||'');
+    let type=t.type==='holiday'?'holiday':'absence';
+    let region=fixRegion(t.region||'india');
+    if(type==='holiday'){person='';region=fixRegion(region)}
+    else{region='';if(!person)return}
+    const dup=type==='holiday'
+      ?timeOff.some(x=>x.date===t.date&&x.type==='holiday'&&x.region===region)
+      :timeOff.some(x=>x.date===t.date&&x.type==='absence'&&x.person.toLowerCase()===person.toLowerCase());
+    if(!dup)timeOff.push({id:t.id||uid(),date:t.date,type,person,region});
+  });
+  /* Migrate legacy leave ranges → person absences once if nothing else loaded. */
+  if(!timeOff.length&&Array.isArray(s.leave)){
+    (s.leave||[]).forEach(l=>{
+      if(!l||!l.menteeId||!l.start||!l.end)return;
+      const person=nameOf(l.menteeId);if(!person)return;
+      const kind=/holiday/i.test(l.type||'')?'holiday':'absence';
+      for(let d=l.start;d<=l.end;d=addDays(d,1)){
+        const wd=new Date(d+'T00:00:00').getDay();
+        if(wd<1||wd>5)continue;
+        if(kind==='holiday'){
+          if(!timeOff.some(t=>t.date===d&&t.type==='holiday'&&t.region==='india'))
+            timeOff.push({id:uid(),date:d,type:'holiday',person:'',region:'india'});
+        }else if(!timeOff.some(t=>t.date===d&&t.type==='absence'&&t.person.toLowerCase()===person.toLowerCase()))
+          timeOff.push({id:uid(),date:d,type:'absence',person,region:''});
+      }
+    });
+  }
+  return {projects,tasks:s.tasks||[],risks:s.risks||[],milestones:s.milestones||[],resources,alloc:s.alloc||{},expenses:s.expenses||[],mentees,oneonones:s.oneonones||[],actions:s.actions||[],goals:s.goals||[],skills:s.skills||[],feedback:s.feedback||[],leave:s.leave||[],timeOff,settings};
+}
+function saveLocal(){
+  try{localStorage.setItem(KEY,JSON.stringify(state))}
+  catch(e){if(!storageWarned){storageWarned=true;toast('This browser is blocking storage. Export a backup to keep your changes.')}}
+}
+function save(){saveLocal();fsMarkDirty();queueAutoBackup()}
+let state=load();
+const ui={tab:'overview',taskView:'list',q:'',fProject:'',fOwner:'',fStatus:'',tsProject:'',fxProject:'',tsGrain:'week',tsFillAll:true,tsMonth:'',capWeek:monday(today),mTab:'team',mMentee:'',calMonth:monthKey(today),absPerson:'',absMode:'holiday',absRegion:'india'};
+
+/* ---------- derived ---------- */
+const pName=id=>(state.projects.find(p=>p.id===id)||{}).name||'No project';
+const progress=id=>{const t=state.tasks.filter(x=>x.projectId===id);return t.length?Math.round(100*t.filter(x=>x.status==='Done').length/t.length):0};
+const isOverdue=t=>t.due&&t.due<today&&t.status!=='Done';
+const owners=()=>[...new Set([...state.projects,...state.tasks,...state.risks].map(x=>(x.owner||'').trim()).filter(Boolean))].sort();
+const riskScore=r=>r.impact*r.likelihood;
+const riskClass=n=>n>=6?'bad':n>=3?'warn':'ok';
+const hh=n=>String(Math.round((+n||0)*100)/100);
+const pCurrency=p=>(p&&p.currency)||'';
+const pCurOf=id=>pCurrency(state.projects.find(x=>x.id===id));
+/* Shared currency across a list, or null if projects disagree (do not sum money). */
+function sharedCurrency(list){
+  const arr=list||[];if(!arr.length)return'';
+  const c=pCurrency(arr[0]);return arr.every(p=>pCurrency(p)===c)?c:null;
+}
+function money(n,dec,cur){
+  n=Number(n)||0;const c=cur||'';
+  if(!c)return dec===undefined?nf(Math.round(n)):nf(n);
+  try{const d=dec===undefined?0:dec;return new Intl.NumberFormat(undefined,{style:'currency',currency:c,minimumFractionDigits:d,maximumFractionDigits:d}).format(n)}
+  catch(e){return nf(n)}
+}
+const moneyX=(n,cur)=>money(n,Number.isInteger(+n)?0:2,cur);
+const moneyAgg=(n,cur)=>cur==null?'—':money(n,undefined,cur);
+/* Weekly allocation plan: resources x weeks. Weeks come from the project's start and end dates. */
+function isoWeek(s){const d=new Date(s+'T00:00:00');d.setDate(d.getDate()+3-((d.getDay()+6)%7));const w1=new Date(d.getFullYear(),0,4);return 1+Math.round(((d-w1)/864e5-3+((w1.getDay()+6)%7))/7)}
+function weeksOf(p){
+  if(!p||!p.start||!p.end||p.end<p.start)return [];
+  const out=[];let ws=monday(p.start);
+  while(ws<=p.end&&out.length<156){
+    const from=ws<p.start?p.start:ws;let to=addDays(ws,4);if(to>p.end)to=p.end;if(to<from)to=from;
+    out.push({key:ws,from,to,n:isoWeek(ws),factor:Math.max(0,Math.min(1,(diffDays(from,to)+1)/5))});ws=addDays(ws,7);
+  }
+  return out;
+}
+function planEnd(p){
+  if(!p||!p.start)return p&&p.end||'';
+  const be=p.budgetEnd||'';
+  if(be&&be>=p.start&&(!p.end||be<=p.end))return be;
+  if(be&&be>=p.start&&p.end&&be>p.end)return p.end;
+  return p.end||'';
+}
+function planWeeksOf(p){
+  if(!p||!p.start)return [];
+  const end=planEnd(p);if(!end||end<p.start)return [];
+  return weeksOf({start:p.start,end});
+}
+function sortedProjects(){
+  const pin=new Set(state.settings.pinned||[]);
+  return [...state.projects].sort((a,b)=>(pin.has(b.id)-pin.has(a.id))||a.name.localeCompare(b.name));
+}
+function isPinned(id){return (state.settings.pinned||[]).includes(id)}
+function togglePin(id){
+  const pin=state.settings.pinned||(state.settings.pinned=[]);
+  const i=pin.indexOf(id);if(i>=0)pin.splice(i,1);else pin.push(id);
+  save();render();
+}
+function monthKey(s){return (s||'').slice(0,7)}
+function monthsOf(weeks){
+  const map=new Map();
+  weeks.forEach(w=>{
+    const k=monthKey(w.from);
+    let m=map.get(k);if(!m){m={key:k,weeks:[],from:w.from,to:w.to};map.set(k,m)}
+    m.weeks.push(w);if(w.from<m.from)m.from=w.from;if(w.to>m.to)m.to=w.to;
+  });
+  return [...map.values()];
+}
+function monthLabel(m){
+  const a=new Date((m.monthStart||m.from)+'T00:00:00');
+  const sub=m.days!=null?m.days+'d':((m.weeks&&m.weeks.length)?m.weeks.length+(m.weeks.length===1?' wk':' wks'):'');
+  return a.toLocaleDateString(undefined,{month:'short',year:'numeric'})+(sub?' <span class="sub">'+sub+'</span>':'');
+}
+function weeksInMonth(weeks,month){
+  return (weeks||[]).filter(w=>overlapWorkingDays(w.from,w.to,month.from,month.to)>0);
+}
+function withMonthWeeks(months,weeks){
+  return (months||[]).map(m=>Object.assign({},m,{weeks:weeksInMonth(weeks,m)}));
+}
+/* Clip a week to a calendar month so Week 49 spanning Nov/Dec becomes Nov 30 and Dec 1–4 separately when filtered. */
+function weekSegmentsInMonth(weeks,month){
+  if(!month)return (weeks||[]).map(w=>Object.assign({},w,{share:1,segId:w.key,fullFrom:w.from,fullTo:w.to,split:false}));
+  const out=[];
+  (weeks||[]).forEach(w=>{
+    const from=w.from>month.from?w.from:month.from,to=w.to<month.to?w.to:month.to;
+    if(to<from)return;
+    const days=workingDaysBetween(from,to);if(!days)return;
+    const fullDays=workingDaysBetween(w.from,w.to)||1;
+    out.push({key:w.key,from,to,n:w.n,factor:days/5,share:days/fullDays,fullFrom:w.from,fullTo:w.to,split:from!==w.from||to!==w.to,monthKey:month.key,segId:w.key+'_'+from});
+  });
+  return out;
+}
+function weekActualOf(rid,w){
+  return (+allocOf(rid,w.key).actual||0)*(w.share==null?1:w.share);
+}
+function visibleWeekTotals(res,segments){
+  let ph=0,ah=0,pc=0,ac=0;
+  res.forEach(r=>{
+    const rate=+r.rate||0;
+    (segments||[]).forEach(w=>{
+      const p=weekPlannedOf(r.id,w,r.hpw),a=weekActualOf(r.id,w);
+      ph+=p;ah+=a;pc+=p*rate;ac+=a*rate;
+    });
+  });
+  return {ph,ah,pc,ac};
+}
+function weekMonthBandHtml(month,res,segments,cur){
+  const t=visibleWeekTotals(res,segments);
+  const label=month?new Date(month.monthStart+'T00:00:00').toLocaleDateString(undefined,{month:'long',year:'numeric'})+' ('+fmt(month.from)+' – '+fmt(month.to)+')':'Selected weeks';
+  const k=(v,l)=>'<div><b>'+v+'</b><span>'+l+'</span></div>';
+  return k(hh(t.ph)+' h','Total planned hours')+k(hh(t.ah)+' h','Total actual hours')+k(money(t.pc,undefined,cur),'Planned cost')+k(money(t.ac,undefined,cur),'Actual spent')+k(esc(label),'Period');
+}
+function monthPctOf(rid,month){
+  const vals=(month.weeks||[]).map(w=>+allocOf(rid,w.key).pct||0);
+  if(!vals.length)return 0;
+  const first=vals[0];return vals.every(v=>v===first)?first:0;
+}
+/* Planned/actual for a calendar month: split weekly values by overlapping Mon–Fri days. */
+function monthActualOf(rid,month){
+  return (month.weeks||[]).reduce((s,w)=>{
+    const weekDays=workingDaysBetween(w.from,w.to)||1;
+    const ov=overlapWorkingDays(w.from,w.to,month.from,month.to);
+    return s+(+allocOf(rid,w.key).actual||0)*(ov/weekDays);
+  },0);
+}
+function monthPlannedOf(rid,month,hpw){
+  return (month.weeks||[]).reduce((s,w)=>{
+    const ov=overlapWorkingDays(w.from,w.to,month.from,month.to);
+    return s+((+allocOf(rid,w.key).pct||0)/100)*(+hpw||0)*(ov/5);
+  },0);
+}
+function weekPlannedOf(rid,w,hpw){
+  return ((+allocOf(rid,w.key).pct||0)/100)*(+hpw||0)*(w.factor||1);
+}
+function applyPctToWeeks(rid,weeks,v){weeks.forEach(w=>setAlloc(rid,w.key,'pct',v))}
+const resOf=pid=>state.resources.filter(r=>r.projectId===pid);
+const aKey=(rid,wk)=>rid+'|'+wk;
+const allocOf=(rid,wk)=>state.alloc[aKey(rid,wk)]||{};
+function setAlloc(rid,wk,fld,v){
+  const k=aKey(rid,wk),a=Object.assign({},state.alloc[k]);
+  if(v>0)a[fld]=v;else delete a[fld];
+  if(a.pct==null&&a.actual==null)delete state.alloc[k];else state.alloc[k]=a;
+}
+function dropAlloc(rid){const pre=rid+'|';Object.keys(state.alloc).forEach(k=>{if(k.startsWith(pre))delete state.alloc[k]})}
+function allocList(rid){const pre=rid+'|',out=[];for(const k in state.alloc){if(k.startsWith(pre))out.push(state.alloc[k])}return out}
+function weekKeysOf(p){return new Set(weeksOf(p).map(w=>w.key))}
+function weekMapOf(p){const m=new Map();weeksOf(p).forEach(w=>m.set(w.key,w));return m}
+function prevailingPct(rid){
+  const counts=new Map(),pre=rid+'|';
+  for(const k in state.alloc){
+    if(!k.startsWith(pre))continue;
+    const pct=+state.alloc[k].pct||0;
+    if(pct>0)counts.set(pct,(counts.get(pct)||0)+1);
+  }
+  let best=0,n=0;
+  counts.forEach((c,p)=>{if(c>n){best=p;n=c}});
+  return best;
+}
+/* When project dates change: fill new weeks with each resource's usual Plan %, drop Plan % outside the range. */
+function syncPlanForProject(p){
+  if(!p||!p.id)return;
+  const weeks=weeksOf(p);if(!weeks.length)return;
+  const keys=weekKeysOf(p);
+  resOf(p.id).forEach(r=>{
+    const pct=prevailingPct(r.id);
+    if(pct>0)weeks.forEach(w=>{if(!(+allocOf(r.id,w.key).pct>0))setAlloc(r.id,w.key,'pct',pct)});
+    const pre=r.id+'|';
+    Object.keys(state.alloc).forEach(k=>{
+      if(!k.startsWith(pre))return;
+      const wk=k.slice(pre.length);if(keys.has(wk))return;
+      const a=state.alloc[k];
+      if(a.pct==null)return;
+      if(a.actual!=null){const n={actual:a.actual};state.alloc[k]=n}
+      else delete state.alloc[k];
+    });
+  });
+}
+function resStats(r,opts){
+  opts=opts||{};
+  const p=state.projects.find(x=>x.id===r.projectId)||{};
+  const useHorizon=opts.horizon!==false;
+  const weeks=useHorizon?planWeeksOf(p):weeksOf(p);
+  const wmap=new Map(weeks.map(w=>[w.key,w]));
+  const keys=new Set(wmap.keys());
+  const fullKeys=weekKeysOf(p);
+  const pre=r.id+'|';let ph=0,ah=0,outside=0;
+  for(const k in state.alloc){
+    if(!k.startsWith(pre))continue;
+    const wk=k.slice(pre.length),a=state.alloc[k];
+    if(fullKeys.size&&!fullKeys.has(wk)){outside++;ah+=(+a.actual||0);continue}
+    if(keys.size&&!keys.has(wk)){ah+=(+a.actual||0);continue}
+    const factor=(wmap.get(wk)||{factor:1}).factor;
+    ph+=((+a.pct||0)/100)*(+r.hpw||0)*factor;ah+=(+a.actual||0);
+  }
+  const rate=+r.rate||0;return {ph,ah,pc:ph*rate,ac:ah*rate,outside};
+}
+const planOf=(pid,opts)=>resOf(pid).reduce((t,r)=>{const x=resStats(r,opts);t.ph+=x.ph;t.ah+=x.ah;t.pc+=x.pc;t.ac+=x.ac;t.outside+=x.outside;return t},{ph:0,ah:0,pc:0,ac:0,outside:0});
+function setBudgetFromPlan(pid){
+  const p=state.projects.find(x=>x.id===pid);if(!p)return;
+  const pl=planOf(pid),exp=expTotal(pid);
+  p.budget=Math.round(pl.pc+exp+(+p.spent||0));
+  save();render();toast('Budget set to planned labour'+ (p.budgetEnd?' (to '+fmtY(p.budgetEnd)+')':'') +' + expenses + opening spend.');
+}
+const labourHours=pid=>planOf(pid).ah;
+const labourCost=pid=>planOf(pid).ac;
+const expTotal=pid=>state.expenses.filter(x=>x.projectId===pid).reduce((a,x)=>a+(+x.amount||0),0);
+const actual=p=>(+p.spent||0)+expTotal(p.id)+labourCost(p.id);
+const mById=id=>state.mentees.find(m=>m.id===id);
+const mName=id=>(mById(id)||{}).name||'Unknown';
+const mOpts=()=>state.mentees.map(m=>[m.id,m.name]);
+const lastOneOnOne=id=>state.oneonones.filter(x=>x.menteeId===id).map(x=>x.date).sort().pop()||'';
+const nextDue=m=>{const l=lastOneOnOne(m.id);return l?addDays(l,CAD[m.cadence]||14):today};
+const lastFeedback=id=>state.feedback.filter(x=>x.menteeId===id).map(x=>x.date).sort().pop()||'';
+const normPerson=n=>(n||'').trim();
+const personKey=n=>normPerson(n).toLowerCase();
+const regions=()=>state.settings.regions||[{id:'india',name:'India'},{id:'sweden',name:'Sweden'}];
+const regionById=id=>regions().find(r=>r.id===(id==='default'?'india':id))||regions().find(r=>r.id==='india')||regions()[0];
+const regionName=id=>(regionById(id)||{}).name||'India';
+const regionOpts=()=>regions().map(r=>[r.id,r.name]);
+function personRegionId(person){
+  const k=personKey(person);if(!k)return'india';
+  const fromRes=state.resources.find(r=>personKey(r.name)===k&&r.holidayRegion);
+  if(fromRes&&regions().some(x=>x.id===fromRes.holidayRegion))return fromRes.holidayRegion;
+  const map=state.settings.personRegion||{};
+  const id=map[k]==='default'?'india':map[k];
+  return id&&regions().some(r=>r.id===id)?id:'india';
+}
+function setPersonRegion(person,regionId){
+  const k=personKey(person);if(!k)return;
+  const rid=regionId==='default'?'india':regionId;
+  const id=rid&&regions().some(r=>r.id===rid)?rid:'india';
+  if(!state.settings.personRegion)state.settings.personRegion={};
+  state.settings.personRegion[k]=id;
+  state.resources.forEach(r=>{if(personKey(r.name)===k)r.holidayRegion=id});
+  save();render();
+}
+function timeOffOn(person,d){
+  const key=personKey(person);
+  return (state.timeOff||[]).find(t=>t.type==='absence'&&t.date===d&&personKey(t.person)===key);
+}
+function publicHolidayOn(d,regionId){
+  const rid=(regionId==='default'?'india':regionId)||'india';
+  return (state.timeOff||[]).find(t=>t.type==='holiday'&&t.date===d&&((t.region||'india')==='default'?'india':(t.region||'india'))===rid);
+}
+function isOffForPerson(person,d){
+  const pub=publicHolidayOn(d,personRegionId(person));if(pub)return Object.assign({},pub,{type:'holiday'});
+  return person?timeOffOn(person,d):null;
+}
+const outOn=(id,d)=>{
+  const m=mById(id);if(!m)return state.leave.find(l=>l.menteeId===id&&l.start<=d&&l.end>=d);
+  return isOffForPerson(m.name,d)||state.leave.find(l=>l.menteeId===id&&l.start<=d&&l.end>=d);
+};
+function shiftMonthKey(ym,delta){
+  const [y,m]=(ym||monthKey(today)).split('-').map(Number);
+  const d=new Date(y,(m-1)+(delta||0),1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+function weekdaysInMonthKey(ym){
+  const [y,m]=(ym||monthKey(today)).split('-').map(Number);
+  const start=iso(new Date(y,m-1,1)),end=iso(new Date(y,m,0)),out=[];
+  for(let d=start;d<=end;d=addDays(d,1)){const wd=new Date(d+'T00:00:00').getDay();if(wd>=1&&wd<=5)out.push(d)}
+  return out;
+}
+/* Holiday mode: toggle public holiday for a region. Absence mode: personal absence for a person. */
+function toggleTimeOff(mode,ref,date){
+  if(!date)return;
+  const wd=new Date(date+'T00:00:00').getDay();if(wd<1||wd>5){toast('Only weekdays (Mon–Fri) can be marked.');return}
+  state.timeOff=state.timeOff||[];
+  if(mode==='holiday'){
+    const rid=ref&&regions().some(r=>r.id===ref)?ref:'india';
+    const i=state.timeOff.findIndex(t=>t.type==='holiday'&&t.date===date&&(t.region||'india')===rid);
+    if(i<0)state.timeOff.push({id:uid(),date,type:'holiday',person:'',region:rid});
+    else state.timeOff.splice(i,1);
+    save();render();return;
+  }
+  const who=normPerson(ref);if(!who)return;
+  const rid=personRegionId(who);
+  if(publicHolidayOn(date,rid)){toast('That day is a '+regionName(rid)+' public holiday. Edit it under Public holidays → '+regionName(rid)+'.');return}
+  const i=state.timeOff.findIndex(t=>t.type==='absence'&&t.date===date&&personKey(t.person)===personKey(who));
+  if(i<0)state.timeOff.push({id:uid(),date,type:'absence',person:who,region:''});
+  else state.timeOff.splice(i,1);
+  save();render();
+}
+function weekdayCalHtml(ym,mode,ref){
+  const holiday=mode==='holiday';
+  const rid=holiday?(ref&&regions().some(r=>r.id===ref)?ref:'india'):personRegionId(ref);
+  const who=holiday?'':normPerson(ref);
+  const days=weekdaysInMonthKey(ym),label=new Date(ym+'-01T00:00:00').toLocaleDateString(undefined,{month:'long',year:'numeric'});
+  const weeks=[];let row=[];
+  days.forEach((d,idx)=>{
+    const wd=new Date(d+'T00:00:00').getDay();
+    if(!row.length&&wd>1)for(let i=1;i<wd;i++)row.push(null);
+    row.push(d);
+    if(wd===5||idx===days.length-1){while(row.length<5)row.push(null);weeks.push(row);row=[]}
+  });
+  const cells=weeks.map(w=>'<tr>'+w.map(d=>{
+    if(!d)return'<td class="empty"></td>';
+    const pub=publicHolidayOn(d,rid),own=!holiday&&who?timeOffOn(who,d):null;
+    const locked=!holiday&&!!pub;
+    const mark=holiday?(pub||null):(own||(pub?{type:'holiday'}:null));
+    const cls=mark?(mark.type==='holiday'||locked?'hol':'abs'):'';
+    const tip=locked?'Public holiday ('+regionName(rid)+') — edit under Public holidays'
+      :holiday?(mark?'Public holiday — click to clear':'Click to mark public holiday for '+regionName(rid))
+      :(mark?'Absence — click to clear':'Click to mark personal absence');
+    const labelSm=(locked||(mark&&mark.type==='holiday'))?'Holiday':(mark?'Away':'');
+    return '<td><button type="button" class="cal-day '+(d===today?'today ':'')+cls+(locked?' locked':'')+'" data-act="toff-toggle" data-mode="'+(holiday?'holiday':'absence')+'" data-ref="'+esc(holiday?rid:who)+'" data-date="'+d+'" title="'+esc(tip)+'"><span>'+ +d.slice(8)+'</span>'+(labelSm?'<small>'+labelSm+'</small>':'')+'</button></td>';
+  }).join('')+'</tr>').join('');
+  const legend=holiday
+    ?'<div class="cal-legend"><span><i></i>Working day</span><span><i class="hol"></i>Public holiday</span><span>Applies to everyone assigned to '+esc(regionName(rid))+'.</span></div>'
+    :'<div class="cal-legend"><span><i></i>Available</span><span><i class="abs"></i>Personal absence</span><span><i class="hol"></i>'+esc(regionName(rid))+' public holiday</span><span>Click toggles absences only.</span></div>';
+  return '<div class="cal-wrap"><div class="cal-nav"><button type="button" class="btn sm" data-act="cal-month" data-delta="-1">← Prev</button><b>'+esc(label)+'</b><button type="button" class="btn sm" data-act="cal-month" data-delta="1">Next →</button><button type="button" class="btn sm" data-act="cal-month" data-delta="0">This month</button></div>'+
+    legend+
+    '<table class="cal"><thead><tr><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th></tr></thead><tbody>'+cells+'</tbody></table></div>';
+}
+function offDaysForPerson(person,from,to){
+  let n=0;if(!from||!to||to<from)return 0;
+  for(let d=from;d<=to;d=addDays(d,1)){
+    const wd=new Date(d+'T00:00:00').getDay();if(wd<1||wd>5)continue;
+    if(isOffForPerson(person,d))n++;
+  }
+  return n;
+}
+function peopleNames(){
+  const set=new Map();
+  state.resources.forEach(r=>{const n=normPerson(r.name);if(n)set.set(personKey(n),n)});
+  state.mentees.forEach(m=>{const n=normPerson(m.name);if(n)set.set(personKey(n),n)});
+  return [...set.values()].sort((a,b)=>a.localeCompare(b));
+}
+function addHolidayRegion(){
+  const name=(prompt('Name for this holiday region (e.g. Sweden, India, UK)','')||'').trim();
+  if(!name)return;
+  const id=name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||uid();
+  if(regions().some(r=>r.id===id||r.name.toLowerCase()===name.toLowerCase())){toast('That region already exists.');return}
+  state.settings.regions.push({id,name});ui.absMode='holiday';ui.absRegion=id;save();render();toast(name+' holiday region added.');
+}
+const opts=(arr,sel,blank)=>(blank!==undefined?'<option value="">'+esc(blank)+'</option>':'')+arr.map(o=>{const a=Array.isArray(o)?o:[o,o];return '<option value="'+esc(a[0])+'"'+(String(a[0])===String(sel)?' selected':'')+'>'+esc(a[1])+'</option>'}).join('');
+const actions=(kind,id)=>'<span class="acts"><button class="btn sm" data-act="edit" data-kind="'+kind+'" data-id="'+id+'">Edit</button> <button class="btn sm danger" data-act="del" data-kind="'+kind+'" data-id="'+id+'">'+(kind==='resource'?'Remove':'Delete')+'</button></span>';
+
+/* ---------- views ---------- */
+function viewOverview(){
+  const open=state.tasks.filter(t=>t.status!=='Done');
+  const overdue=open.filter(isOverdue);
+  const dueWeek=open.filter(t=>t.due&&t.due>=today&&t.due<=addDays(today,7));
+  const blocked=open.filter(t=>t.status==='Blocked');
+  const active=state.projects.filter(p=>p.status!=='Done');
+  const attention=active.filter(p=>p.status==='At risk'||p.status==='Off track');
+  const done=state.tasks.length-open.length;
+  const pct=state.tasks.length?Math.round(100*done/state.tasks.length):0;
+  const budget=state.projects.reduce((a,p)=>a+(+p.budget||0),0), spent=state.projects.reduce((a,p)=>a+actual(p),0);
+  const bpct=budget?Math.round(100*spent/budget):0;
+
+  let head,sub;
+  if(!state.projects.length&&!state.tasks.length){head='Add your first project to get started.';sub='Use the Projects tab, or load sample data from “Data and backup”.'}
+  else{
+    head=(overdue.length?overdue.length+(overdue.length===1?' task is overdue':' tasks are overdue'):'Nothing is overdue')+', and '+dueWeek.length+(dueWeek.length===1?' task is':' tasks are')+' due in the next 7 days.';
+    sub=new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'})+'. '+attention.length+' of '+active.length+' active projects need attention.';
+  }
+
+  const kpis=[[active.length,'Active projects'],[open.length,'Open tasks'],[pct+'%','Tasks complete'],[blocked.length,'Blocked tasks'],[bpct+'%','Budget used']]
+    .map(k=>'<div class="kpi"><b>'+k[0]+'</b><span>'+k[1]+'</span></div>').join('');
+
+  const health=state.projects.length?'<div class="scroll"><table><thead><tr><th>Project</th><th>Status</th><th>Progress</th><th>Ends</th><th>Budget used</th></tr></thead><tbody>'+
+    state.projects.map(p=>{const bp=p.budget?Math.round(100*actual(p)/p.budget):0;
+      return '<tr><td><button class="link" data-act="filter-project" data-id="'+p.id+'">'+esc(p.name)+'</button><div class="sub">'+esc(p.owner)+'</div></td><td>'+pill(p.status)+'</td>'+
+      '<td style="min-width:120px"><div class="bar"><i style="width:'+progress(p.id)+'%"></i></div><span class="sub">'+progress(p.id)+'%</span></td>'+
+      '<td class="num">'+fmt(p.end)+'</td><td style="min-width:110px"><div class="bar'+(bp>100?' over':'')+'"><i style="width:'+Math.min(bp,100)+'%"></i></div><span class="sub">'+bp+'%</span></td></tr>'}).join('')+'</tbody></table></div>'
+    :'<p class="empty">No projects yet.</p>';
+
+  const total=state.tasks.length||1;
+  const stack='<div class="stack" role="img" aria-label="Task status distribution">'+TASK_STATUS.map(s=>{const n=state.tasks.filter(t=>t.status===s).length;return n?'<i class="'+SC[s]+'" style="width:'+(100*n/total)+'%" title="'+s+': '+n+'"></i>':''}).join('')+'</div>'+
+    '<div class="legend">'+TASK_STATUS.map(s=>'<span><span class="dot '+SC[s]+'"></span>'+s+' <b>'+state.tasks.filter(t=>t.status===s).length+'</b></span>').join('')+'</div>';
+
+  const wl={};open.forEach(t=>{const o=t.owner||'Unassigned';wl[o]=wl[o]||{n:0,late:0};wl[o].n++;if(isOverdue(t))wl[o].late++});
+  const wlMax=Math.max(1,...Object.values(wl).map(x=>x.n));
+  const work=Object.keys(wl).length?'<div class="rows">'+Object.keys(wl).sort((a,b)=>wl[b].n-wl[a].n).map(o=>'<div class="wl"><span>'+esc(o)+'</span><div class="bar" style="height:10px"><i style="width:'+(100*wl[o].n/wlMax)+'%"></i></div><span class="num">'+wl[o].n+(wl[o].late?' <span class="late">('+wl[o].late+' late)</span>':'')+'</span></div>').join('')+'</div>':'<p class="empty">No open tasks.</p>';
+
+  const soon=open.filter(t=>t.due&&t.due<=addDays(today,14)).sort((a,b)=>a.due.localeCompare(b.due)).slice(0,8);
+  const dueHtml=soon.length?soon.map(t=>'<div class="due"><div><strong>'+esc(t.title)+'</strong><small>'+esc(pName(t.projectId))+', '+esc(t.owner||'Unassigned')+'</small></div><div class="num '+(isOverdue(t)?'late':'')+'">'+rel(t.due)+'<small>'+fmt(t.due)+'</small></div></div>').join(''):'<p class="empty">Nothing due in the next two weeks.</p>';
+
+  const risks=state.risks.filter(r=>r.status==='Open').sort((a,b)=>riskScore(b)-riskScore(a)).slice(0,4);
+  const riskHtml=risks.length?risks.map(r=>'<div class="due"><div><strong>'+esc(r.title)+'</strong><small>'+esc(pName(r.projectId))+', '+esc(r.owner||'No owner')+'</small></div><div><span class="pill '+riskClass(riskScore(r))+'">Score '+riskScore(r)+'</span></div></div>').join(''):'<p class="empty">No open risks.</p>';
+
+  const wk=monday(today);
+  let myPlanH=0,myActH=0,budgetTot=0,spentTot=0;
+  state.resources.forEach(r=>{
+    const a=allocOf(r.id,wk),p=state.projects.find(x=>x.id===r.projectId)||{},w=(weeksOf(p).find(x=>x.key===wk)||{factor:1});
+    myPlanH+=((+a.pct||0)/100)*(+r.hpw||0)*w.factor;myActH+=(+a.actual||0);
+  });
+  state.projects.forEach(p=>{budgetTot+=+p.budget||0;spentTot+=actual(p)});
+  const myBurn=budgetTot?Math.round(100*spentTot/budgetTot):0;
+  const dueOpen=state.tasks.filter(t=>t.status!=='Done'&&t.due&&t.due<=addDays(today,7));
+  const openRisks=state.risks.filter(r=>r.status==='Open').length;
+  const myWeek='<section class="panel s12"><h2>My week <span>'+esc(fmt(wk))+' – '+esc(fmt(addDays(wk,4)))+'</span></h2><div class="mine-grid">'+
+    '<div><b>'+hh(myPlanH)+' h</b><span>Planned this week</span></div>'+
+    '<div><b>'+hh(myActH)+' h</b><span>Logged this week</span></div>'+
+    '<div><b>'+myBurn+'%</b><span>Budget used overall</span></div>'+
+    '<div><b>'+dueOpen.length+' / '+openRisks+'</b><span>Tasks due 7d / open risks</span></div></div></section>';
+  return '<section class="hero"><h1>'+esc(head)+'</h1><p>'+esc(sub)+'</p><div class="kpis">'+kpis+'</div></section>'+
+  '<div class="grid">'+myWeek+
+    '<section class="panel s7"><h2>Project health</h2>'+health+'</section>'+
+    '<section class="panel s5"><h2>Task status <span>'+state.tasks.length+' tasks</span></h2>'+(state.tasks.length?stack:'<p class="empty">No tasks yet.</p>')+'<h2 style="margin-top:22px">Open work by owner</h2>'+work+'</section>'+
+    '<section class="panel s6"><h2>Due soon <span>next 14 days and overdue</span></h2>'+dueHtml+'</section>'+
+    '<section class="panel s6"><h2>Top open risks</h2>'+riskHtml+'</section>'+mentOverviewHtml()+
+  '</div>';
+}
+
+function viewProjects(){
+  const rows=sortedProjects().map(p=>{const bp=p.budget?Math.round(100*actual(p)/p.budget):0;const pin=isPinned(p.id);
+    return '<tr><td><button class="pin-btn'+(pin?' on':'')+'" data-act="toggle-pin" data-id="'+p.id+'" title="'+(pin?'Unpin':'Pin')+'">'+(pin?'★':'☆')+'</button> <button class="link" data-act="filter-project" data-id="'+p.id+'">'+esc(p.name)+'</button>'+(p.notes?'<div class="sub">'+esc(p.notes)+'</div>':'')+(p.budgetEnd?'<div class="sub">Budget horizon '+esc(fmtY(p.budgetEnd))+'</div>':'')+'</td><td>'+esc(p.owner)+'</td><td>'+pill(p.status)+'</td>'+
+    '<td style="min-width:110px"><div class="bar"><i style="width:'+progress(p.id)+'%"></i></div><span class="sub">'+progress(p.id)+'% of '+state.tasks.filter(t=>t.projectId===p.id).length+' tasks</span></td>'+
+    '<td class="dense"><input class="inline-date" type="date" data-act="proj-date" data-id="'+p.id+'" data-fld="start" value="'+esc(p.start||'')+'" aria-label="Start date"><br><input class="inline-date" type="date" data-act="proj-date" data-id="'+p.id+'" data-fld="end" value="'+esc(p.end||'')+'" aria-label="End date"></td>'+
+    '<td style="min-width:130px"><div class="bar'+(bp>100?' over':'')+'"><i style="width:'+Math.min(bp,100)+'%"></i></div><span class="sub num">'+money(actual(p),undefined,pCurrency(p))+' of '+money(p.budget,undefined,pCurrency(p))+'</span><div class="acts" style="margin-top:4px"><button class="btn sm" data-act="budget-from-plan" data-id="'+p.id+'">From plan</button></div></td><td>'+actions('project',p.id)+'</td></tr>'}).join('');
+  return '<div class="toolbar"><div class="spacer"></div><button class="btn" data-act="save-template">Save plan template</button><button class="btn primary" data-act="add" data-kind="project">Add project</button></div>'+
+  '<section class="panel">'+(rows?'<div class="scroll"><table><thead><tr><th>Project</th><th>Owner</th><th>Status</th><th>Progress</th><th>Dates</th><th>Budget</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div><p class="sub" style="margin-top:10px;max-width:none">Shared absences are on the Absences tab. Timesheet → Estimate shows planned − absence for each project.</p>':'<p class="empty">No projects yet. Add one to start tracking tasks, risks and milestones.</p>')+'</section>';
+}
+
+function viewTasks(){
+  return '<div class="toolbar">'+
+    '<input type="search" id="q" placeholder="Search tasks" aria-label="Search tasks" value="'+esc(ui.q)+'">'+
+    '<select id="fProject" aria-label="Filter by project">'+opts(state.projects.map(p=>[p.id,p.name]),ui.fProject,'All projects')+'</select>'+
+    '<select id="fOwner" aria-label="Filter by owner">'+opts(owners(),ui.fOwner,'All owners')+'</select>'+
+    '<select id="fStatus" aria-label="Filter by status">'+opts([['open','Open (not done)'],...TASK_STATUS],ui.fStatus,'All statuses')+'</select>'+
+    '<div class="spacer"></div>'+
+    '<div class="seg" role="group" aria-label="Task layout"><button data-act="tv" data-v="list" aria-pressed="'+(ui.taskView==='list')+'">List</button><button data-act="tv" data-v="board" aria-pressed="'+(ui.taskView==='board')+'">Board</button></div>'+
+    '<button class="btn primary" data-act="add" data-kind="task">Add task</button></div><div id="taskbody"></div>';
+}
+function filteredTasks(){
+  const q=ui.q.toLowerCase();
+  return state.tasks.filter(t=>(!ui.fProject||t.projectId===ui.fProject)&&(!ui.fOwner||t.owner===ui.fOwner)&&
+    (!ui.fStatus||(ui.fStatus==='open'?t.status!=='Done':t.status===ui.fStatus))&&
+    (!q||(t.title+' '+t.owner+' '+pName(t.projectId)).toLowerCase().includes(q)));
+}
+function renderTaskBody(){
+  const list=filteredTasks();
+  const el=$('#taskbody'); if(!el)return;
+  if(!list.length){el.innerHTML='<section class="panel"><p class="empty">'+(state.tasks.length?'No tasks match these filters.':'No tasks yet. Add one to get started.')+'</p></section>';return}
+  if(ui.taskView==='board'){
+    el.innerHTML='<div class="board">'+TASK_STATUS.map(s=>{const items=list.filter(t=>t.status===s);
+      return '<section class="col" data-status="'+s+'"><h3>'+s+' <span>'+items.length+'</span></h3>'+items.map(t=>
+        '<div class="card" draggable="true" data-id="'+t.id+'"><p>'+esc(t.title)+'</p><div><span>'+esc(pName(t.projectId))+'</span><span class="'+(isOverdue(t)?'late':'')+'">'+fmt(t.due)+'</span></div>'+
+        '<div style="margin-top:6px"><span><span class="dot '+t.priority+'"></span>'+t.priority+(t.owner?', '+esc(t.owner):'')+'</span><button class="btn sm" data-act="edit" data-kind="task" data-id="'+t.id+'">Edit</button></div></div>').join('')+'</section>'}).join('')+'</div>';
+    return;
+  }
+  const sorted=[...list].sort((a,b)=>(a.status==='Done')-(b.status==='Done')||(a.due||'9999').localeCompare(b.due||'9999'));
+  el.innerHTML='<section class="panel"><div class="scroll"><table><thead><tr><th>Task</th><th>Project</th><th>Owner</th><th>Priority</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>'+
+    sorted.map(t=>'<tr class="'+(t.status==='Done'?'is-done':'')+'"><td>'+esc(t.title)+'</td><td>'+esc(pName(t.projectId))+'</td><td>'+esc(t.owner)+'</td>'+
+    '<td><span class="dot '+t.priority+'"></span>'+t.priority+'</td><td class="num '+(isOverdue(t)?'late':'')+'">'+fmt(t.due)+(isOverdue(t)?'<br><small>'+rel(t.due)+'</small>':'')+'</td>'+
+    '<td><select class="inline" data-act="status" data-id="'+t.id+'" aria-label="Status for '+esc(t.title)+'">'+opts(TASK_STATUS,t.status)+'</select></td><td>'+actions('task',t.id)+'</td></tr>').join('')+
+    '</tbody></table></div></section>';
+}
+
+function viewTimeline(){
+  const ps=state.projects.filter(p=>p.start&&p.end);
+  const msBlock='<section class="panel" style="margin-top:16px"><h2>Milestones <button class="btn sm primary" data-act="add" data-kind="milestone">Add milestone</button></h2>'+
+    (state.milestones.length?'<div class="scroll"><table><thead><tr><th>Done</th><th>Milestone</th><th>Project</th><th>Date</th><th></th></tr></thead><tbody>'+
+    [...state.milestones].sort((a,b)=>a.date.localeCompare(b.date)).map(m=>'<tr><td><input type="checkbox" data-act="ms-done" data-id="'+m.id+'" '+(m.done?'checked':'')+' aria-label="Mark '+esc(m.title)+' done"></td><td>'+esc(m.title)+'</td><td>'+esc(pName(m.projectId))+'</td><td class="num '+(!m.done&&m.date<today?'late':'')+'">'+fmtY(m.date)+'</td><td>'+actions('milestone',m.id)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="empty">No milestones yet.</p>')+'</section>';
+  if(!ps.length)return '<section class="panel"><p class="empty">Add projects with start and end dates to see the timeline.</p></section>'+msBlock;
+  const all=[...ps.map(p=>p.start),...ps.map(p=>p.end),...state.milestones.map(m=>m.date),today].sort();
+  const min=addDays(all[0],-7), max=addDays(all[all.length-1],7), span=diffDays(min,max);
+  const pos=d=>100*diffDays(min,d)/span;
+  let ticks='';const m=new Date(min+'T00:00:00');m.setDate(1);
+  while(iso(m)<=max){const s=iso(m);if(s>=min)ticks+='<div class="tick" style="left:'+pos(s)+'%">'+m.toLocaleDateString(undefined,{month:'short',year:m.getMonth()===0?'numeric':undefined})+'</div>';m.setMonth(m.getMonth()+1)}
+  const rows=ps.map(p=>{
+    const w=Math.max(pos(p.end)-pos(p.start),1.5);
+    return '<div class="tl-row"><div class="tl-label"><strong>'+esc(p.name)+'</strong><span>'+esc(p.owner)+', '+p.status+'</span></div><div class="tl-track"><div class="tl-today" style="left:'+pos(today)+'%" title="Today"></div>'+
+      '<div class="tl-bar '+SC[p.status]+'" style="left:'+pos(p.start)+'%;width:'+w+'%" title="'+esc(p.name)+': '+fmt(p.start)+' to '+fmt(p.end)+'"><i style="width:'+progress(p.id)+'%"></i><span>'+progress(p.id)+'%</span></div>'+
+      state.milestones.filter(x=>x.projectId===p.id).map(x=>'<button class="tl-ms '+(x.done?'done':'')+'" style="left:'+pos(x.date)+'%" title="'+esc(x.title)+', '+fmt(x.date)+'" aria-label="Milestone '+esc(x.title)+'" data-act="edit" data-kind="milestone" data-id="'+x.id+'"></button>').join('')+
+    '</div></div>'}).join('');
+  return '<section class="panel"><h2>Timeline <span>Bars show project dates and task progress. Diamonds are milestones. The lime line is today.</span></h2><div class="scroll"><div class="tl"><div class="tl-head"><div></div><div class="tl-axis">'+ticks+'</div></div>'+rows+'</div></div></section>'+msBlock;
+}
+
+function viewRisks(){
+  const sorted=[...state.risks].sort((a,b)=>(a.status==='Closed')-(b.status==='Closed')||riskScore(b)-riskScore(a));
+  return '<div class="toolbar"><div class="spacer"></div><button class="btn primary" data-act="add" data-kind="risk">Add risk</button></div><section class="panel">'+
+    (sorted.length?'<div class="scroll"><table><thead><tr><th>Risk</th><th>Project</th><th>Owner</th><th>Impact</th><th>Likelihood</th><th>Score</th><th>Status</th><th></th></tr></thead><tbody>'+
+    sorted.map(r=>'<tr class="'+(r.status==='Closed'?'is-done':'')+'"><td>'+esc(r.title)+(r.mitigation?'<div class="sub">Mitigation: '+esc(r.mitigation)+'</div>':'')+'</td><td>'+esc(pName(r.projectId))+'</td><td>'+esc(r.owner)+'</td><td>'+LEVEL[r.impact-1][1]+'</td><td>'+LEVEL[r.likelihood-1][1]+'</td><td><span class="pill '+riskClass(riskScore(r))+'">'+riskScore(r)+'</span></td><td>'+pill(r.status)+'</td><td>'+actions('risk',r.id)+'</td></tr>').join('')+'</tbody></table></div>'
+    :'<p class="empty">No risks logged. Score is impact times likelihood, from 1 to 9.</p>')+'</section>';
+}
+
+/* ----- timesheet: weekly allocation plan with actuals ----- */
+function weekLabel(w){
+  const a=new Date(w.from+'T00:00:00'),b=new Date(w.to+'T00:00:00'),mo=d=>d.toLocaleDateString(undefined,{month:'short'});
+  if(w.from===w.to)return a.getDate()+' '+mo(a);
+  return a.getMonth()===b.getMonth()?a.getDate()+'–'+b.getDate()+' '+mo(a):a.getDate()+' '+mo(a)+'–'+b.getDate()+' '+mo(b);
+}
+function planBandHtml(p){
+  const t=planOf(p.id),burn=t.ph?Math.round(100*t.ah/t.ph):0,cur=pCurrency(p);
+  const horizon=p.budgetEnd&&p.end&&p.budgetEnd<p.end?' to '+fmt(p.budgetEnd):'';
+  const k=(v,l,c)=>'<div><b class="'+(c||'')+'">'+v+'</b><span>'+l+'</span></div>';
+  return k(hh(t.ph)+' h','Planned hours'+horizon)+k(money(t.pc,undefined,cur),'Planned cost'+horizon)+k(hh(t.ah)+' h','Actual hours')+k(money(t.ac,undefined,cur),'Actual spent')+k(burn+'%','Of planned hours used',burn>100?'neg':'');
+}
+function planCatHtml(p){
+  const cat={},cur=pCurrency(p);resOf(p.id).forEach(r=>{const x=resStats(r),c=r.category||'Other',t=cat[c]||(cat[c]={ph:0,pc:0,ah:0,ac:0});t.ph+=x.ph;t.pc+=x.pc;t.ah+=x.ah;t.ac+=x.ac});
+  const keys=Object.keys(cat);
+  return '<h2>By category</h2>'+(keys.length?'<div class="scroll"><table><thead><tr><th>Category</th><th>Planned hours</th><th>Planned cost</th><th>Actual hours</th><th>Actual spent</th></tr></thead><tbody>'+
+    keys.map(c=>'<tr><td>'+esc(c)+'</td><td class="num">'+hh(cat[c].ph)+'</td><td class="num">'+money(cat[c].pc,undefined,cur)+'</td><td class="num">'+hh(cat[c].ah)+'</td><td class="num">'+money(cat[c].ac,undefined,cur)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="empty">No resources yet.</p>');
+}
+function workingDaysBetween(from,to){
+  if(!from||!to||to<from)return 0;
+  let n=0,d=from;
+  while(d<=to&&n<400){
+    const wd=new Date(d+'T00:00:00').getDay();
+    if(wd>=1&&wd<=5)n++;
+    d=addDays(d,1);
+  }
+  return n;
+}
+function overlapWorkingDays(aFrom,aTo,bFrom,bTo){
+  const from=aFrom>bFrom?aFrom:bFrom,to=aTo<bTo?aTo:bTo;
+  return to<from?0:workingDaysBetween(from,to);
+}
+/* Calendar months (1st–last day), clipped to project dates — not week buckets. */
+function calendarMonthsOf(p,endDate){
+  if(!p||!p.start)return [];
+  const end=endDate||p.end;if(!end||end<p.start)return [];
+  const out=[];let y=+p.start.slice(0,4),m=+p.start.slice(5,7)-1;
+  const endY=+end.slice(0,4),endM=+end.slice(5,7)-1;
+  while(y<endY||(y===endY&&m<=endM)){
+    const monthStart=iso(new Date(y,m,1)),monthEnd=iso(new Date(y,m+1,0));
+    const from=monthStart<p.start?p.start:monthStart,to=monthEnd>end?end:monthEnd;
+    if(from<=to)out.push({key:monthStart.slice(0,7),from,to,monthStart,monthEnd,days:workingDaysBetween(from,to)});
+    m++;if(m>11){m=0;y++}
+    if(out.length>120)break;
+  }
+  return out;
+}
+function projectMonthBudget(p){
+  const months=calendarMonthsOf(p),planLimit=planEnd(p),weeks=weeksOf(p),res=resOf(p.id);
+  return months.map(month=>{
+    let ph=0,ah=0,pc=0,ac=0,xh=0,xc=0;
+    const planTo=planLimit&&planLimit<month.to?planLimit:month.to;
+    const planOk=!planLimit||month.from<=planLimit;
+    res.forEach(r=>{
+      const rate=+r.rate||0,hpw=+r.hpw||0;
+      weeks.forEach(w=>{
+        const a=allocOf(r.id,w.key),weekDays=workingDaysBetween(w.from,w.to)||1;
+        const ovAct=overlapWorkingDays(w.from,w.to,month.from,month.to);
+        if(ovAct){const f=ovAct/weekDays,ahW=(+a.actual||0)*f;ah+=ahW;ac+=ahW*rate}
+        if(planOk&&planTo>=month.from){
+          const ovPlan=overlapWorkingDays(w.from,w.to,month.from,planTo);
+          if(ovPlan){
+            const phW=((+a.pct||0)/100)*hpw*(ovPlan/5);ph+=phW;pc+=phW*rate;
+            const absFrom=w.from>month.from?w.from:month.from,absTo=w.to<planTo?w.to:planTo;
+            const absDays=offDaysForPerson(r.name,absFrom,absTo);
+            if(absDays){const xW=((+a.pct||0)/100)*hpw*(absDays/5);xh+=xW;xc+=xW*rate}
+          }
+        }
+      });
+    });
+    const eh=Math.max(0,ph-xh),ec=Math.max(0,pc-xc);
+    return {m:month,ph,ah,pc,ac,xh,xc,eh,ec,var:ac-pc,evar:ac-ec};
+  });
+}
+function viewTimesheetBudget(p,res,allWeeks,tb){
+  const rows=projectMonthBudget(p),thisMonth=monthKey(today),cur=pCurrency(p);
+  if(!rows.length)return tb+'<section class="panel"><p class="empty">No months in this project’s date range.</p></section>';
+  let tPh=0,tAh=0,tPc=0,tAc=0;
+  const body=rows.map(x=>{
+    tPh+=x.ph;tAh+=x.ah;tPc+=x.pc;tAc+=x.ac;
+    const label=new Date(x.m.monthStart+'T00:00:00').toLocaleDateString(undefined,{month:'long',year:'numeric'});
+    return '<tr><td><strong>'+esc(label)+'</strong><div class="sub">'+esc(fmt(x.m.from))+' – '+esc(fmt(x.m.to))+' · '+x.m.days+' working day'+(x.m.days===1?'':'s')+(x.m.key===thisMonth?' · this month':'')+'</div></td>'+
+      '<td class="num">'+hh(x.ph)+'</td><td class="num">'+money(x.pc,undefined,cur)+'</td>'+
+      '<td class="num">'+hh(x.ah)+'</td><td class="num">'+money(x.ac,undefined,cur)+'</td>'+
+      '<td class="num '+(x.var>0?'neg':'')+'">'+money(x.var,undefined,cur)+'</td></tr>';
+  }).join('');
+  const byRes=res.map(r=>{
+    const x=resStats(r);
+    return '<tr><td>'+esc(r.category)+'</td><td><strong>'+esc(r.name)+'</strong></td><td class="num">'+hh(x.ph)+'</td><td class="num">'+money(x.pc,undefined,cur)+'</td><td class="num">'+hh(x.ah)+'</td><td class="num">'+money(x.ac,undefined,cur)+'</td><td class="num '+((x.ac-x.pc)>0?'neg':'')+'">'+money(x.ac-x.pc,undefined,cur)+'</td></tr>';
+  }).join('');
+  return tb+'<section class="panel fin" id="planBand" style="margin-bottom:16px">'+planBandHtml(p)+'</section>'+
+    '<section class="panel"><h2>Month budget <span>By calendar month for '+esc(p.name)+(p.budgetEnd?' · planned labour to '+esc(fmtY(p.budgetEnd)):'')+'</span></h2>'+
+    '<div class="scroll"><table><thead><tr><th>Month</th><th>Planned hours</th><th>Planned cost</th><th>Actual hours</th><th>Actual spent</th><th>Variance</th></tr></thead><tbody>'+body+
+    '</tbody><tfoot class="tot"><tr><td>Total</td><td class="num">'+hh(tPh)+'</td><td class="num">'+money(tPc,undefined,cur)+'</td><td class="num">'+hh(tAh)+'</td><td class="num">'+money(tAc,undefined,cur)+'</td><td class="num '+((tAc-tPc)>0?'neg':'')+'">'+money(tAc-tPc,undefined,cur)+'</td></tr></tfoot></table></div>'+
+    '<p class="sub" style="margin-top:10px;max-width:none">Each row is a calendar month (from the 1st to the last day, clipped to the project dates). Weekly Plan % and actual hours are split into months by overlapping Mon–Fri days. Planned hours use plan % × hrs/wk × (days in month ÷ 5). Variance = actual − planned. Mark shared absences on the Absences tab; see Estimate for planned − absence.</p></section>'+
+    '<section class="panel" style="margin-top:16px"><h2>By resource <span>Project totals</span></h2><div class="scroll"><table><thead><tr><th>Category</th><th>Resource</th><th>Planned hours</th><th>Planned cost</th><th>Actual hours</th><th>Actual spent</th><th>Variance</th></tr></thead><tbody>'+
+    (byRes||'<tr><td colspan="7" class="empty">No resources.</td></tr>')+'</tbody></table></div></section>'+
+    '<section class="panel" id="planCat" style="margin-top:16px">'+planCatHtml(p)+'</section>';
+}
+function viewTimesheetEstimate(p,res,tb){
+  const rows=projectMonthBudget(p),thisMonth=monthKey(today),cur=pCurrency(p);
+  if(!rows.length)return tb+'<section class="panel"><p class="empty">No months in this project’s date range.</p></section>';
+  let tPh=0,tXh=0,tEh=0,tPc=0,tXc=0,tEc=0,tAh=0,tAc=0;
+  const body=rows.map(x=>{
+    tPh+=x.ph;tXh+=x.xh;tEh+=x.eh;tPc+=x.pc;tXc+=x.xc;tEc+=x.ec;tAh+=x.ah;tAc+=x.ac;
+    const label=new Date(x.m.monthStart+'T00:00:00').toLocaleDateString(undefined,{month:'long',year:'numeric'});
+    const off=res.reduce((n,r)=>n+offDaysForPerson(r.name,x.m.from,x.m.to),0);
+    return '<tr><td><strong>'+esc(label)+'</strong><div class="sub">'+esc(fmt(x.m.from))+' – '+esc(fmt(x.m.to))+(off?' · '+off+' resource-day'+(off===1?'':'s')+' off':'')+(x.m.key===thisMonth?' · this month':'')+'</div></td>'+
+      '<td class="num">'+hh(x.ph)+'</td><td class="num">'+money(x.pc,undefined,cur)+'</td>'+
+      '<td class="num">'+hh(x.xh)+'</td><td class="num">'+money(x.xc,undefined,cur)+'</td>'+
+      '<td class="num"><strong>'+hh(x.eh)+'</strong></td><td class="num"><strong>'+money(x.ec,undefined,cur)+'</strong></td>'+
+      '<td class="num">'+hh(x.ah)+'</td><td class="num '+(x.evar>0?'neg':'')+'">'+money(x.evar,undefined,cur)+'</td></tr>';
+  }).join('');
+  const k=(v,l,c)=>'<div><b class="'+(c||'')+'">'+v+'</b><span>'+l+'</span></div>';
+  const band='<section class="panel fin" style="margin-bottom:16px">'+k(hh(tPh)+' h','Planned hours')+k(hh(tXh)+' h','Absence hours')+k(hh(tEh)+' h','Estimated hours')+k(money(tEc,undefined,cur),'Estimated cost')+k(money(tAc-tEc,undefined,cur),'Actual vs estimate',(tAc-tEc)>0?'neg':'')+'</section>';
+  return tb+band+
+    '<section class="panel"><h2>Estimated budget <span>Planned − absences for '+esc(p.name)+'</span></h2>'+
+    '<div class="scroll"><table><thead><tr><th>Month</th><th>Planned h</th><th>Planned cost</th><th>Absence h</th><th>Absence cost</th><th>Estimated h</th><th>Estimated cost</th><th>Actual h</th><th>Actual − estimate</th></tr></thead><tbody>'+body+
+    '</tbody><tfoot class="tot"><tr><td>Total</td><td class="num">'+hh(tPh)+'</td><td class="num">'+money(tPc,undefined,cur)+'</td><td class="num">'+hh(tXh)+'</td><td class="num">'+money(tXc,undefined,cur)+'</td><td class="num">'+hh(tEh)+'</td><td class="num">'+money(tEc,undefined,cur)+'</td><td class="num">'+hh(tAh)+'</td><td class="num '+((tAc-tEc)>0?'neg':'')+'">'+money(tAc-tEc,undefined,cur)+'</td></tr></tfoot></table></div>'+
+    '<p class="sub" style="margin-top:10px;max-width:none">Uses the Absences tab: each resource’s holiday region (e.g. Sweden vs Default) plus their personal absences (matched by name). Absence hours = plan % × hrs/wk × (off weekdays ÷ 5). Estimated = planned − absence.</p></section>';
+}
+function viewAbsences(){
+  if(!ui.calMonth)ui.calMonth=monthKey(today);
+  const names=peopleNames(),regs=regions();
+  if(!regs.some(r=>r.id===ui.absRegion))ui.absRegion='india';
+  if(ui.absPerson&&!names.some(n=>personKey(n)===personKey(ui.absPerson)))ui.absPerson=names[0]||'';
+  if(ui.absMode!=='absence')ui.absMode='holiday';
+  if(ui.absMode==='absence'&&!ui.absPerson&&names.length)ui.absPerson=names[0];
+  const holiday=ui.absMode==='holiday';
+  const rid=ui.absRegion||'india';
+  const who=normPerson(ui.absPerson);
+  const title=holiday?('Public holidays — '+regionName(rid)):(who||'Person')+' — personal absences';
+  const hint=holiday
+    ?'Mark holidays for '+regionName(rid)+'. Resources with this Holiday region get these days off on every project.'
+    :'Personal absences for '+(who||'this person')+'. Set their Holiday region on the resource (Timesheet → Edit resource) or here. Region holidays show locked.';
+  const modeSeg='<div class="seg" role="group" aria-label="Absence calendar mode">'+
+    '<button type="button" data-act="abs-mode" data-v="holiday" aria-pressed="'+(holiday?'true':'false')+'">Public holidays</button>'+
+    '<button type="button" data-act="abs-mode" data-v="absence" aria-pressed="'+(!holiday?'true':'false')+'">Personal absences</button></div>';
+  const regionPick=holiday
+    ?'<label class="chk">Region <select id="absRegion" aria-label="Holiday region">'+opts(regs.map(r=>[r.id,r.name]),rid)+'</select></label><button type="button" class="btn sm" data-act="add-region">Add region</button>'
+    :'<label class="chk">Person <select id="absPerson" aria-label="Person">'+opts(names.map(n=>[n,n]),who)+'</select></label>'+
+     (who?'<label class="chk">Holiday region <select id="personRegion" aria-label="Holiday region for person">'+opts(regs.map(r=>[r.id,r.name]),personRegionId(who))+'</select></label>':'');
+  const snapRows=holiday
+    ?regs.map(r=>{
+      const upcoming=(state.timeOff||[]).filter(t=>t.type==='holiday'&&((t.region||'india')==='default'?'india':(t.region||'india'))===r.id&&t.date>=today).sort((a,b)=>a.date.localeCompare(b.date));
+      const assigned=names.filter(n=>personRegionId(n)===r.id).length;
+      return '<tr><td><button class="link" data-act="abs-region" data-id="'+r.id+'">'+esc(r.name)+'</button></td><td class="num">'+assigned+'</td><td>'+(upcoming[0]?esc(fmt(upcoming[0].date)):'<span class="sub">None</span>')+'</td><td class="num">'+(upcoming.length||'–')+'</td></tr>';
+    }).join('')
+    :names.map(n=>{
+      const marks=(state.timeOff||[]).filter(t=>t.type==='absence'&&personKey(t.person)===personKey(n)&&t.date>=today).sort((a,b)=>a.date.localeCompare(b.date));
+      const nextPub=(state.timeOff||[]).filter(t=>t.type==='holiday'&&((t.region||'india')==='default'?'india':(t.region||'india'))===personRegionId(n)&&t.date>=today).sort((a,b)=>a.date.localeCompare(b.date))[0];
+      const todayMark=isOffForPerson(n,today);
+      const status=todayMark?pill(todayMark.type==='holiday'?'Holiday':'Away'):'<span class="sub">Available</span>';
+      let nextLabel='<span class="sub">None</span>';
+      if(marks[0])nextLabel=esc(fmt(marks[0].date))+' <span class="sub">away</span>';
+      else if(nextPub)nextLabel=esc(fmt(nextPub.date))+' <span class="sub">holiday</span>';
+      return '<tr><td><button class="link" data-act="abs-person" data-person="'+esc(n)+'">'+esc(n)+'</button><div class="sub">'+esc(regionName(personRegionId(n)))+'</div></td><td>'+status+'</td><td>'+nextLabel+'</td><td class="num">'+(marks.length||'–')+'</td></tr>';
+    }).join('');
+  const snapHead=holiday
+    ?'<tr><th>Region</th><th>People</th><th>Next holiday</th><th>Upcoming</th></tr>'
+    :'<tr><th>Person</th><th>Today</th><th>Next</th><th>Absences</th></tr>';
+  return '<div class="toolbar">'+modeSeg+regionPick+'<span class="sub">'+(holiday?'India / Sweden (or add a region)':'Set Holiday region on each Timesheet resource')+'</span><div class="spacer"></div></div>'+
+    '<div class="grid"><section class="panel s7"><h2>Absences <span>'+esc(title)+' · weekdays only</span></h2>'+
+    '<p class="sub" style="margin-bottom:12px;max-width:none">'+esc(hint)+'</p>'+
+    weekdayCalHtml(ui.calMonth,ui.absMode,holiday?rid:who)+'</section>'+
+    '<section class="panel s5"><h2>'+(holiday?'Regions':'People')+' <span>Overview</span></h2><div class="scroll"><table><thead>'+snapHead+'</thead><tbody>'+(snapRows||'<tr><td colspan="4" class="empty">Nothing to show yet.</td></tr>')+'</tbody></table></div>'+
+    '<p class="sub" style="margin-top:10px;max-width:none">Point a resource to a region: Timesheet → Edit resource → Holiday region (India or Sweden).</p></section></div>';
+}
+function viewTimesheet(){
+  if(!state.projects.length)return '<section class="panel"><p class="empty">Add a project first. Its start and end dates create the weeks of the plan.</p></section>';
+  if(!state.projects.some(x=>x.id===ui.tsProject))ui.tsProject=(sortedProjects().find(x=>x.status!=='Done')||sortedProjects()[0]).id;
+  const p=state.projects.find(x=>x.id===ui.tsProject),allWeeks=weeksOf(p),res=resOf(p.id),thisWeek=monday(today);
+  const months=withMonthWeeks(calendarMonthsOf(p),allWeeks),monthly=ui.tsGrain==='month',budget=ui.tsGrain==='budget',estimate=ui.tsGrain==='estimate';
+  if(ui.tsGrain==='absences')ui.tsGrain='estimate';
+  if(!ui.tsMonth&&months.length){const cur=months.find(m=>m.key===monthKey(today));ui.tsMonth=(cur||months[0]).key}
+  if(ui.tsMonth&&months.length&&!months.some(m=>m.key===ui.tsMonth))ui.tsMonth=months[0].key;
+  const jumpMonth=months.find(m=>m.key===ui.tsMonth);
+  const weekSegs=(!monthly&&!budget&&!estimate)?weekSegmentsInMonth(allWeeks,jumpMonth):[];
+  const weeks=monthly||budget||estimate?allWeeks:weekSegs;
+  const grain='<div class="seg" role="group" aria-label="Timesheet period">'
+    +'<button type="button" data-act="ts-grain" data-v="week" aria-pressed="'+(ui.tsGrain==='week'?'true':'false')+'">Weekly</button>'
+    +'<button type="button" data-act="ts-grain" data-v="month" aria-pressed="'+(monthly?'true':'false')+'">Monthly</button>'
+    +'<button type="button" data-act="ts-grain" data-v="budget" aria-pressed="'+(budget?'true':'false')+'">Budget</button>'
+    +'<button type="button" data-act="ts-grain" data-v="estimate" aria-pressed="'+(estimate?'true':'false')+'">Estimate</button></div>';
+  const fill=(budget||estimate)?'':'<label class="chk"><input type="checkbox" id="tsFillAll"'+(ui.tsFillAll?' checked':'')+'> Apply Plan % to all '+(monthly?'months':'weeks')+'</label>';
+  const monthJump=(!budget&&!estimate&&months.length)?'<label class="chk">Month <select id="tsMonth" aria-label="Jump to month">'+opts(months.map(m=>[m.key,m.key+' ('+fmt(m.from)+'–'+fmt(m.to)+')']),ui.tsMonth)+'</select></label>':'';
+  const tb='<div class="toolbar"><select id="tsProject" aria-label="Project">'+opts(sortedProjects().map(x=>[x.id,x.name]),p.id)+'</select>'+grain+monthJump+fill+
+    '<button class="btn sm" data-act="quick-actuals">Log this week</button><button class="btn sm" data-act="budget-from-plan" data-id="'+p.id+'">Set budget from plan</button><button class="btn sm" data-act="apply-template" data-id="'+p.id+'">Apply template</button>'+
+    '<span class="sub">'+(allWeeks.length?esc(fmtY(p.start))+' to '+esc(fmtY(p.end))+(p.budgetEnd?' · budget to '+esc(fmtY(p.budgetEnd)):'')+', '+months.length+(months.length===1?' month':' months')+', '+allWeeks.length+(allWeeks.length===1?' week':' weeks')+(!monthly&&!budget&&!estimate&&jumpMonth?' · showing '+esc(jumpMonth.key):''):'')+'</span><div class="spacer"></div>'+addBtn('resource','Add resource',1)+'</div>';
+  if(!allWeeks.length)return tb+'<section class="panel"><p class="empty">This project needs a start and end date (end on or after start) to create its weeks.</p><button class="btn" data-act="edit" data-kind="project" data-id="'+p.id+'">Edit project dates</button></section>';
+  if(!res.length)return tb+'<section class="panel"><p class="empty">No resources in this plan yet. Add each person with their category, hourly rate and hours per week (at 100%), then enter their weekly allocation.</p>'+addBtn('resource','Add resource',1)+'</section>';
+  if(budget)return viewTimesheetBudget(p,res,allWeeks,tb);
+  if(estimate)return viewTimesheetEstimate(p,res,tb);
+  const cur=pCurrency(p);
+  const rt=(k,r)=>'<td class="num" data-rt="'+k+'" data-r="'+r.id+'"></td>';
+  let head1,head2,rows,foot,title,hint,weekBand='';
+  if(monthly){
+    const thisMonth=monthKey(today);
+    head1='<tr><th class="s1" rowspan="2">Category</th><th class="s2" rowspan="2">Resource</th><th rowspan="2">Rate</th><th rowspan="2">Hrs/wk</th>'+
+      months.map(m=>'<th colspan="3" class="wk '+(m.key===thisMonth?'today':'')+'">'+monthLabel(m)+'<br><span class="sub">'+esc(fmt(m.from))+'–'+esc(fmt(m.to))+'</span></th>').join('')+
+      '<th rowspan="2">Planned hours</th><th rowspan="2">Planned cost</th><th rowspan="2">Actual hours</th><th rowspan="2">Actual spent</th><th rowspan="2">Used</th><th rowspan="2"></th></tr>';
+    head2='<tr>'+months.map(()=>'<th class="sh">Plan %</th><th class="sh">Planned h</th><th class="sh">Actual h</th>').join('')+'</tr>';
+    rows=res.map(r=>'<tr><td class="s1">'+esc(r.category)+'</td><td class="s2"><strong>'+esc(r.name)+'</strong><div class="sub">'+esc(regionName(personRegionId(r.name)))+'</div></td><td class="num">'+esc(moneyX(r.rate,cur))+'</td><td class="num">'+hh(r.hpw)+'</td>'+
+      months.map(m=>{const pct=monthPctOf(r.id,m),ph=monthPlannedOf(r.id,m,r.hpw),ah=monthActualOf(r.id,m);
+        return '<td class="pl"><input type="number" min="0" max="500" step="5" data-fld="pct" data-grain="month" data-r="'+r.id+'" data-m="'+m.key+'" value="'+(pct||'')+'" placeholder="0" aria-label="Plan percent, '+esc(r.name)+', '+m.key+'"></td>'+
+               '<td class="num" data-mt="planned" data-r="'+r.id+'" data-m="'+m.key+'">'+(ph?hh(ph):'–')+'</td>'+
+               '<td class="num ac" data-mt="actual" data-r="'+r.id+'" data-m="'+m.key+'">'+(ah?hh(ah):'–')+'</td>'}).join('')+
+      rt('ph',r)+rt('pc',r)+rt('ah',r)+rt('ac',r)+rt('used',r)+'<td>'+actions('resource',r.id)+'</td></tr>').join('');
+    foot='<tr><td class="s1">Total</td><td class="s2"></td><td></td><td></td>'+months.map(m=>'<td class="num pl" data-mtot="pct" data-m="'+m.key+'"></td><td class="num" data-mtot="planned" data-m="'+m.key+'"></td><td class="num" data-mtot="actual" data-m="'+m.key+'"></td>').join('')+
+      '<td class="num" data-tt="ph"></td><td class="num" data-tt="pc"></td><td class="num" data-tt="ah"></td><td class="num" data-tt="ac"></td><td class="num" data-tt="used"></td><td></td></tr>';
+    title='Monthly allocation';
+    hint='Months are calendar months (1st to last day, clipped to project dates). Plan % applies to overlapping weeks. Planned and actual hours are split into the month by Mon–Fri days. Edit weekly actuals in Weekly view.';
+  }else{
+    head1='<tr><th class="s1" rowspan="2">Category</th><th class="s2" rowspan="2">Resource</th><th rowspan="2">Rate</th><th rowspan="2">Hrs/wk</th>'+
+      weekSegs.map(w=>'<th colspan="3" class="wk '+(w.key===thisWeek&&!w.split?'today':'')+'">Week '+w.n+(w.split?' <span class="sub">partial</span>':'')+'<br><span class="sub">'+esc(weekLabel(w))+'</span></th>').join('')+
+      '<th rowspan="2">Planned hours</th><th rowspan="2">Planned cost</th><th rowspan="2">Actual hours</th><th rowspan="2">Actual spent</th><th rowspan="2">Used</th><th rowspan="2"></th></tr>';
+    head2='<tr>'+weekSegs.map(()=>'<th class="sh">Plan %</th><th class="sh">Planned h</th><th class="sh">Actual h</th>').join('')+'</tr>';
+    rows=res.map(r=>'<tr><td class="s1">'+esc(r.category)+'</td><td class="s2"><strong>'+esc(r.name)+'</strong><div class="sub">'+esc(regionName(personRegionId(r.name)))+'</div></td><td class="num">'+esc(moneyX(r.rate,cur))+'</td><td class="num">'+hh(r.hpw)+'</td>'+
+      weekSegs.map(w=>{const a=allocOf(r.id,w.key),ph=weekPlannedOf(r.id,w,r.hpw),ah=weekActualOf(r.id,w);
+        return '<td class="pl"><input type="number" min="0" max="500" step="5" data-fld="pct" data-grain="week" data-r="'+r.id+'" data-w="'+w.key+'" value="'+(a.pct||'')+'" placeholder="0" aria-label="Plan percent, '+esc(r.name)+', week '+w.n+'"></td>'+
+               '<td class="num" data-wt="planned" data-seg="'+w.segId+'" data-r="'+r.id+'">'+(ph?hh(ph):'–')+'</td>'+
+               '<td class="ac"><input type="number" min="0" step="0.5" data-fld="actual" data-grain="week" data-r="'+r.id+'" data-w="'+w.key+'" data-share="'+w.share+'" data-seg="'+w.segId+'" value="'+(ah?hh(ah):'')+'" placeholder="0" aria-label="Actual hours, '+esc(r.name)+', '+esc(weekLabel(w))+'"></td>'}).join('')+
+      rt('ph',r)+rt('pc',r)+rt('ah',r)+rt('ac',r)+rt('used',r)+'<td>'+actions('resource',r.id)+'</td></tr>').join('');
+    foot='<tr><td class="s1">Total</td><td class="s2"></td><td></td><td></td>'+weekSegs.map(w=>'<td class="num pl" data-wt="pct" data-seg="'+w.segId+'"></td><td class="num" data-wt="planned" data-seg="'+w.segId+'"></td><td class="num" data-wt="actual" data-seg="'+w.segId+'"></td>').join('')+
+      '<td class="num" data-tt="ph"></td><td class="num" data-tt="pc"></td><td class="num" data-tt="ah"></td><td class="num" data-tt="ac"></td><td class="num" data-tt="used"></td><td></td></tr>';
+    title='Weekly allocation';
+    hint=(jumpMonth?'Showing '+jumpMonth.key+' ('+fmt(jumpMonth.from)+'–'+fmt(jumpMonth.to)+'). Weeks that cross months are split (e.g. Week 49 → Nov 30 and Dec 1–4). ':'')+'Plan % is for the full ISO week; planned and actual hours shown are for the dates in this month only.';
+    weekBand='<section class="panel fin" id="weekMonthBand" style="margin-bottom:16px">'+weekMonthBandHtml(jumpMonth,res,weekSegs,cur)+'</section>';
+  }
+  const outside=planOf(p.id).outside;
+  return tb+'<section class="panel fin" id="planBand" style="margin-bottom:16px">'+planBandHtml(p)+'</section>'+weekBand+
+    '<section class="panel"><h2>'+title+' <span>'+esc(hint)+'</span></h2><div class="scroll"><table class="plan"><thead>'+head1+head2+'</thead><tbody>'+rows+'</tbody><tfoot>'+foot+'</tfoot></table></div>'+
+    '<p class="sub" style="margin-top:10px;max-width:none">Planned hours = plan % × hours per week × (working days in the column ÷ 5). Actual hours on a partial week are the share of that week’s actual for the dates shown. Planned cost = planned hours × rate.'+
+    (outside?' <strong>Some entries sit outside the project dates. Widen the dates to edit them.</strong>':'')+'</p></section>'+
+    '<section class="panel" id="planCat" style="margin-top:16px">'+planCatHtml(p)+'</section>';
+}
+function updatePlanTotals(){
+  if(ui.tab!=='timesheet'||!$('#planBand'))return;
+  const p=state.projects.find(x=>x.id===ui.tsProject);if(!p)return;
+  if(ui.tsGrain==='budget'){
+    $('#planBand').innerHTML=planBandHtml(p);
+    const cat=$('#planCat');if(cat)cat.innerHTML=planCatHtml(p);
+    return;
+  }
+  const allWeeks=weeksOf(p),months=withMonthWeeks(calendarMonthsOf(p),allWeeks),res=resOf(p.id),cur=pCurrency(p),set=(sel,txt)=>{const el=$(sel);if(el)el.textContent=txt};
+  const jumpMonth=months.find(m=>m.key===ui.tsMonth);
+  if(ui.tsGrain==='month'){
+    const T={ph:0,pc:0,ah:0,ac:0};
+    res.forEach(r=>{const x=resStats(r),q=k=>'[data-rt="'+k+'"][data-r="'+r.id+'"]';
+      T.ph+=x.ph;T.pc+=x.pc;T.ah+=x.ah;T.ac+=x.ac;
+      set(q('ph'),hh(x.ph));set(q('pc'),money(x.pc,undefined,cur));set(q('ah'),hh(x.ah));set(q('ac'),money(x.ac,undefined,cur));set(q('used'),x.ph?Math.round(100*x.ah/x.ph)+'%':'–')});
+    months.forEach(m=>{let pc=0,phTot=0,ac=0;res.forEach(r=>{
+      const pct=monthPctOf(r.id,m);if(pct)pc+=pct;
+      const rph=monthPlannedOf(r.id,m,r.hpw);phTot+=rph;
+      const rah=monthActualOf(r.id,m);ac+=rah;
+      const phEl=$('[data-mt="planned"][data-r="'+r.id+'"][data-m="'+m.key+'"]');if(phEl)phEl.textContent=rph?hh(rph):'–';
+      const ahEl=$('[data-mt="actual"][data-r="'+r.id+'"][data-m="'+m.key+'"]');if(ahEl)ahEl.textContent=rah?hh(rah):'–';
+    });
+      set('[data-mtot="pct"][data-m="'+m.key+'"]',pc?pc+'%':'–');
+      set('[data-mtot="planned"][data-m="'+m.key+'"]',phTot?hh(phTot):'–');
+      set('[data-mtot="actual"][data-m="'+m.key+'"]',ac?hh(ac):'–')});
+    set('[data-tt="ph"]',hh(T.ph));set('[data-tt="pc"]',money(T.pc,undefined,cur));set('[data-tt="ah"]',hh(T.ah));set('[data-tt="ac"]',money(T.ac,undefined,cur));set('[data-tt="used"]',T.ph?Math.round(100*T.ah/T.ph)+'%':'–');
+  }else{
+    const segs=weekSegmentsInMonth(allWeeks,jumpMonth),vis=visibleWeekTotals(res,segs);
+    res.forEach(r=>{
+      let ph=0,ah=0;segs.forEach(w=>{ph+=weekPlannedOf(r.id,w,r.hpw);ah+=weekActualOf(r.id,w)});
+      const rate=+r.rate||0,pc=ph*rate,ac=ah*rate,q=k=>'[data-rt="'+k+'"][data-r="'+r.id+'"]';
+      set(q('ph'),hh(ph));set(q('pc'),money(pc,undefined,cur));set(q('ah'),hh(ah));set(q('ac'),money(ac,undefined,cur));set(q('used'),ph?Math.round(100*ah/ph)+'%':'–');
+    });
+    segs.forEach(w=>{let pc=0,phTot=0,ac=0;res.forEach(r=>{
+      const a=allocOf(r.id,w.key),ph=weekPlannedOf(r.id,w,r.hpw),ah=weekActualOf(r.id,w);
+      pc+=+a.pct||0;phTot+=ph;ac+=ah;
+      const phEl=$('[data-wt="planned"][data-seg="'+w.segId+'"][data-r="'+r.id+'"]');if(phEl)phEl.textContent=ph?hh(ph):'–';
+      const ahInp=$('input[data-fld="actual"][data-seg="'+w.segId+'"][data-r="'+r.id+'"]');
+      if(ahInp&&document.activeElement!==ahInp)ahInp.value=ah?hh(ah):'';
+    });
+      document.querySelectorAll('tfoot [data-wt="pct"][data-seg="'+w.segId+'"]').forEach(el=>{el.textContent=pc?pc+'%':'–'});
+      document.querySelectorAll('tfoot [data-wt="planned"][data-seg="'+w.segId+'"]').forEach(el=>{el.textContent=phTot?hh(phTot):'–'});
+      document.querySelectorAll('tfoot [data-wt="actual"][data-seg="'+w.segId+'"]').forEach(el=>{el.textContent=ac?hh(ac):'–'});
+    });
+    set('[data-tt="ph"]',hh(vis.ph));set('[data-tt="pc"]',money(vis.pc,undefined,cur));set('[data-tt="ah"]',hh(vis.ah));set('[data-tt="ac"]',money(vis.ac,undefined,cur));set('[data-tt="used"]',vis.ph?Math.round(100*vis.ah/vis.ph)+'%':'–');
+    const band=$('#weekMonthBand');if(band)band.innerHTML=weekMonthBandHtml(jumpMonth,res,segs,cur);
+  }
+  $('#planBand').innerHTML=planBandHtml(p);$('#planCat').innerHTML=planCatHtml(p);
+}
+
+/* ----- finances ----- */
+function finRows(){return state.projects.map(p=>{const e=expTotal(p.id),pl=planOf(p.id),l=pl.ac,o=+p.spent||0,a=o+e+l,b=+p.budget||0;return {p,e,l,pp:pl.pc,o,a,b,lh:pl.ah,rem:b-a,pct:b?Math.round(100*a/b):0,cur:pCurrency(p)}})}
+function finTopHtml(){
+  const rows=finRows(),sum=k=>rows.reduce((x,r)=>x+r[k],0),cur=sharedCurrency(state.projects);
+  const B=sum('b'),E=sum('e'),L=sum('l'),O=sum('o'),A=sum('a'),R=B-A;
+  const k=(v,l,c)=>'<div><b class="'+(c||'')+'">'+v+'</b><span>'+l+'</span></div>';
+  const band=cur==null
+    ?'<section class="panel fin">'+k(rows.length,'Projects')+k(hh(sum('lh'))+' h','Labour hours')+k('—','Money totals')+k('Mixed','Currencies')+k(rows.length?Math.round(rows.reduce((s,r)=>s+r.pct,0)/rows.length)+'%':'–','Avg budget used')+'</section>'
+    :'<section class="panel fin">'+k(money(B,undefined,cur),'Total budget')+k(money(E,undefined,cur),'Expenses')+k(money(L,undefined,cur),'Labour spent, '+hh(sum('lh'))+' hours')+k(money(A,undefined,cur),'Spent in total')+k(money(R,undefined,cur),'Remaining',R<0?'neg':'')+'</section>';
+  const foot=cur==null
+    ?'<tr><td colspan="9" class="sub">Money totals are omitted because projects use different currencies. Each row uses that project’s currency.</td></tr>'
+    :'<tr><td>Total</td><td class="num">'+money(B,undefined,cur)+'</td><td class="num">'+money(O,undefined,cur)+'</td><td class="num">'+money(E,undefined,cur)+'</td><td class="num">'+money(L,undefined,cur)+'</td><td class="num">'+money(sum('pp'),undefined,cur)+'</td><td class="num">'+money(A,undefined,cur)+'</td><td class="num '+(R<0?'neg':'')+'">'+money(R,undefined,cur)+'</td><td></td></tr>';
+  const table=rows.length?'<section class="panel" style="margin-top:16px"><h2>Budget by project <span>Spent = opening spend + expenses + labour spent (actual hours × rate from the Timesheet plan). Currency is set per project.</span></h2><div class="scroll"><table><thead><tr><th>Project</th><th>Budget</th><th>Opening spend</th><th>Expenses</th><th>Labour spent</th><th>Labour planned</th><th>Spent</th><th>Remaining</th><th>Used</th></tr></thead><tbody>'+
+    rows.map(r=>'<tr><td>'+esc(r.p.name)+'<div class="sub">'+hh(r.lh)+' hours logged'+(r.cur?' · '+esc(r.cur):' · plain numbers')+'</div></td><td class="num">'+money(r.b,undefined,r.cur)+'</td><td class="num">'+money(r.o,undefined,r.cur)+'</td><td class="num">'+money(r.e,undefined,r.cur)+'</td><td class="num">'+money(r.l,undefined,r.cur)+'</td><td class="num">'+money(r.pp,undefined,r.cur)+'</td><td class="num"><strong>'+money(r.a,undefined,r.cur)+'</strong></td><td class="num '+(r.rem<0?'neg':'')+'">'+money(r.rem,undefined,r.cur)+'</td><td style="min-width:110px"><div class="bar'+(r.pct>100?' over':'')+'"><i style="width:'+Math.min(r.pct,100)+'%"></i></div><span class="sub">'+r.pct+'%</span></td></tr>').join('')+
+    '</tbody><tfoot class="tot">'+foot+'</tfoot></table></div></section>'
+    :'<section class="panel" style="margin-top:16px"><p class="empty">Add a project with a budget to see spend against it.</p></section>';
+  return band+table;
+}
+function finCatHtml(){
+  const cur=sharedCurrency(state.projects);
+  if(cur==null)return '<h2>Where the money goes</h2><p class="empty">Projects use different currencies, so spend is not combined here. See each project row above.</p>';
+  const rows=finRows(),L=rows.reduce((x,r)=>x+r.l,0),O=rows.reduce((x,r)=>x+r.o,0);
+  const cat={};state.expenses.forEach(x=>{const c=x.category||'Other';cat[c]=(cat[c]||0)+(+x.amount||0)});
+  if(L)cat['Labour']=L;if(O)cat['Opening spend']=O;
+  const en=Object.entries(cat).sort((a,b)=>b[1]-a[1]),tot=en.reduce((s,e)=>s+e[1],0)||1,mx=Math.max(1,...en.map(e=>e[1]));
+  return '<h2>Where the money goes</h2>'+(en.length?'<div class="rows">'+en.map(e=>'<div><div style="display:flex;justify-content:space-between;gap:8px"><span>'+esc(e[0])+'</span><span class="num">'+money(e[1],undefined,cur)+' <span class="sub">'+Math.round(100*e[1]/tot)+'%</span></span></div><div class="bar"><i style="width:'+(100*e[1]/mx)+'%"></i></div></div>').join('')+'</div>':'<p class="empty">No spend yet.</p>');
+}
+function viewFinances(){
+  const ex=state.expenses.filter(x=>!ui.fxProject||x.projectId===ui.fxProject).sort((a,b)=>b.date.localeCompare(a.date));
+  const exProjs=ui.fxProject?[state.projects.find(p=>p.id===ui.fxProject)].filter(Boolean):state.projects.filter(p=>ex.some(x=>x.projectId===p.id));
+  const exCur=sharedCurrency(exProjs.length?exProjs:state.projects.filter(p=>!ui.fxProject||p.id===ui.fxProject));
+  const exTotal=ex.reduce((a,x)=>a+(+x.amount||0),0);
+  const expenses='<section class="panel s7"><h2>Expenses <span><select id="fxProject" class="inline" aria-label="Filter expenses by project">'+opts(state.projects.map(p=>[p.id,p.name]),ui.fxProject,'All projects')+'</select> <button class="btn sm primary" data-act="add" data-kind="expense">Add expense</button></span></h2>'+
+    (ex.length?'<div class="scroll"><table><thead><tr><th>Date</th><th>Description</th><th>Project</th><th>Category</th><th>Amount</th><th></th></tr></thead><tbody>'+
+      ex.map(x=>'<tr><td class="num">'+fmtY(x.date)+'</td><td>'+esc(x.description)+'</td><td>'+esc(pName(x.projectId))+'</td><td>'+esc(x.category)+'</td><td class="num">'+esc(moneyX(x.amount,pCurOf(x.projectId)))+'</td><td>'+actions('expense',x.id)+'</td></tr>').join('')+
+      '</tbody><tfoot class="tot"><tr><td colspan="4">Total shown</td><td class="num">'+moneyAgg(exTotal,exCur)+'</td><td></td></tr></tfoot></table></div>':'<p class="empty">No expenses yet. Add one to track spend against a project budget.</p>')+'</section>';
+  return '<div id="finTop">'+finTopHtml()+'</div>'+
+    '<section class="panel" style="margin-top:16px"><h2>Forecast vs actual <span>By month · respects budget horizon</span></h2>'+forecastHtml()+'</section>'+
+    '<div class="grid" style="margin-top:16px">'+expenses+'<section class="panel s5" id="finCat">'+finCatHtml()+'</section></div>'+
+    '<p class="foot">Hourly rates and hours are set per resource on the Timesheet tab. Labour spent updates when you enter actual hours there. Set each project’s currency when you edit the project.</p>';
+}
+
+/* ----- mentoring ----- */
+function mToolbar(showFilter,buttons){
+  return '<div class="toolbar"><div class="seg" role="group" aria-label="Mentoring views">'+M_TABS.map(t=>'<button data-act="mtab" data-v="'+t[0]+'" aria-pressed="'+(ui.mTab===t[0])+'">'+t[1]+'</button>').join('')+'</div>'+
+    (showFilter&&state.mentees.length?'<select id="mFilter" aria-label="Filter by person">'+opts(mOpts(),ui.mMentee,'Everyone')+'</select>':'')+'<div class="spacer"></div>'+buttons+'</div>';
+}
+const addBtn=(kind,label,primary)=>'<button class="btn'+(primary?' primary':'')+'" data-act="add" data-kind="'+kind+'">'+label+'</button>';
+const mEmpty=()=>'<section class="panel"><p class="empty">Add the people you mentor to track 1:1s, goals, feedback and availability.</p>'+addBtn('mentee','Add person',1)+'</section>';
+
+function mentOverviewHtml(){
+  if(!state.mentees.length)return '';
+  const due=state.mentees.filter(m=>nextDue(m)<=addDays(today,7)).sort((a,b)=>nextDue(a).localeCompare(nextDue(b))).slice(0,6);
+  const mine=state.actions.filter(a=>!a.done&&a.owner==='Me').sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999')).slice(0,6);
+  const dueHtml=due.length?due.map(m=>'<div class="due"><div><strong>'+esc(m.name)+'</strong><small>'+esc(m.cadence)+' 1:1, last '+(lastOneOnOne(m.id)?fmt(lastOneOnOne(m.id)):'never')+'</small></div><div class="num '+(nextDue(m)<today?'late':'')+'">'+rel(nextDue(m))+'<small>'+fmt(nextDue(m))+'</small></div></div>').join(''):'<p class="empty">No 1:1s due in the next 7 days.</p>';
+  const mineHtml=mine.length?mine.map(a=>'<div class="due"><div><strong>'+esc(a.text)+'</strong><small>'+esc(mName(a.menteeId))+'</small></div><div class="num '+(a.due&&a.due<today?'late':'')+'">'+(a.due?rel(a.due):'No date')+'<small>'+fmt(a.due)+'</small></div></div>').join(''):'<p class="empty">No open actions on you.</p>';
+  return '<section class="panel s6"><h2>1:1s due <span><button class="btn sm" data-tab="mentoring">Open mentoring</button></span></h2>'+dueHtml+'</section><section class="panel s6"><h2>Actions I owe</h2>'+mineHtml+'</section>';
+}
+
+function viewMentTeam(){
+  const tb=mToolbar(false,addBtn('mentee','Add person',1));
+  if(!state.mentees.length)return tb+mEmpty();
+  const ms=[...state.mentees].sort((a,b)=>nextDue(a).localeCompare(nextDue(b)));
+  const overdue=ms.filter(m=>nextDue(m)<today).length;
+  const week=ms.filter(m=>nextDue(m)>=today&&nextDue(m)<=addDays(today,7)).length;
+  const oa=state.actions.filter(a=>!a.done);
+  const k=(v,l,c)=>'<div><b class="'+(c||'')+'">'+v+'</b><span>'+l+'</span></div>';
+  const band='<section class="panel fin" style="margin-bottom:16px">'+k(ms.length,'People')+k(overdue,'1:1s overdue',overdue?'neg':'')+k(week,'1:1s due this week')+k(oa.filter(a=>a.owner==='Me').length,'Open actions on me')+k(oa.filter(a=>a.owner!=='Me').length,'Waiting on others')+'</section>';
+  const rows=ms.map(m=>{
+    const last=lastOneOnOne(m.id),nd=nextDue(m),open=openActions(m.id),mine=open.filter(a=>a.owner==='Me').length;
+    const gs=state.goals.filter(g=>g.menteeId===m.id&&g.status==='In progress'),avg=gs.length?Math.round(gs.reduce((x,g)=>x+(+g.progress||0),0)/gs.length):0;
+    const lf=lastFeedback(m.id),lfLate=!lf||diffDays(lf,today)>60;
+    const out=outOn(m.id,today),rid=personRegionId(m.name);
+    const soon=(state.timeOff||[]).filter(t=>t.date>today&&t.date<=addDays(today,14)&&((t.type==='absence'&&personKey(t.person)===personKey(m.name))||(t.type==='holiday'&&((t.region||'india')==='default'?'india':(t.region||'india'))===rid))).sort((a,b)=>a.date.localeCompare(b.date))[0];
+    const avail=out?'<span class="pill '+(out.type==='holiday'?'bad':'warn')+'">'+(out.type==='holiday'?'Holiday':'Away')+(out.end?' until '+fmt(out.end):' today')+'</span>':soon?'<span class="sub">Out '+fmt(soon.date)+'</span>':'<span class="sub">Available</span>';
+    return '<tr><td><button class="link" data-act="filter-mentee" data-id="'+m.id+'">'+esc(m.name)+'</button><div class="sub">'+esc(m.role)+'</div></td><td>'+esc(m.cadence)+'</td>'+
+      '<td class="num">'+(last?fmt(last):'Never')+'<div class="sub">'+(last?diffDays(last,today)+' days ago':'')+'</div></td>'+
+      '<td class="num '+(nd<today?'late':'')+'">'+fmt(nd)+'<div class="sub '+(nd<today?'late':'')+'">'+rel(nd)+'</div></td>'+
+      '<td class="num">'+open.length+' open<div class="sub">'+mine+' on me</div></td>'+
+      '<td style="min-width:110px">'+(gs.length?'<div class="bar"><i style="width:'+avg+'%"></i></div><span class="sub">'+avg+'% of '+gs.length+(gs.length===1?' goal':' goals')+'</span>':'<span class="sub">No active goals</span>')+'</td>'+
+      '<td class="num '+(lfLate?'late':'')+'">'+(lf?fmt(lf):'None')+'</td><td>'+avail+'</td><td>'+actions('mentee',m.id)+'</td></tr>'}).join('');
+  return tb+band+'<section class="panel"><h2>Team <span>Sorted by next 1:1 due. Click a name to see their 1:1s.</span></h2><div class="scroll"><table><thead><tr><th>Person</th><th>Cadence</th><th>Last 1:1</th><th>Next 1:1</th><th>Actions</th><th>Goals</th><th>Last feedback</th><th>Availability</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></section>';
+}
+const openActions=id=>state.actions.filter(a=>a.menteeId===id&&!a.done);
+
+function viewOneOnOnes(){
+  const tb=mToolbar(true,addBtn('action','Add action')+' '+addBtn('oneonone','Log 1:1',1));
+  if(!state.mentees.length)return tb+mEmpty();
+  const f=ui.mMentee;
+  const notes=state.oneonones.filter(x=>!f||x.menteeId===f).sort((a,b)=>b.date.localeCompare(a.date));
+  const acts=state.actions.filter(a=>!f||a.menteeId===f);
+  const open=acts.filter(a=>!a.done).sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999'));
+  const done=acts.filter(a=>a.done).sort((a,b)=>(b.due||'').localeCompare(a.due||'')).slice(0,6);
+  const row=a=>'<div class="act '+(a.done?'is-done':'')+'"><input type="checkbox" data-act="act-done" data-id="'+a.id+'" '+(a.done?'checked':'')+' aria-label="Mark done: '+esc(a.text)+'"><div><strong>'+esc(a.text)+'</strong><small>'+esc(mName(a.menteeId))+', owner: '+esc(a.owner)+(a.due?', <span class="'+(!a.done&&a.due<today?'late':'')+'">'+(a.done?fmt(a.due):rel(a.due))+'</span>':'')+'</small></div>'+actions('action',a.id)+'</div>';
+  const log=notes.length?notes.map(x=>'<div class="entry"><h4><span>'+esc(mName(x.menteeId))+'<small>'+fmtY(x.date)+'</small></span>'+actions('oneonone',x.id)+'</h4><p>'+esc(x.notes||'No notes.')+'</p></div>').join(''):'<p class="empty">No 1:1 notes yet. Use “Log 1:1” after your next meeting.</p>';
+  return tb+'<div class="grid"><section class="panel s7"><h2>1:1 log <span>'+notes.length+' entries</span></h2>'+log+'</section>'+
+    '<section class="panel s5"><h2>Action items <span>'+open.length+' open</span></h2>'+(open.length?open.map(row).join(''):'<p class="empty">No open actions.</p>')+(done.length?'<h2 style="margin-top:18px">Recently done</h2>'+done.map(row).join(''):'')+'</section></div>';
+}
+
+function lvlHtml(level,target){return '<span class="lvl" role="img" aria-label="Level '+level+' of 5, target '+target+'">'+[1,2,3,4,5].map(i=>'<i class="'+(i<=level?'on':'')+(i===target?' tg':'')+'"></i>').join('')+'</span>'}
+function viewGrowth(){
+  const tb=mToolbar(true,addBtn('skill','Add skill')+' '+addBtn('goal','Add goal',1));
+  if(!state.mentees.length)return tb+mEmpty();
+  const f=ui.mMentee,byName=(a,b)=>mName(a.menteeId).localeCompare(mName(b.menteeId));
+  const goals=state.goals.filter(g=>!f||g.menteeId===f).sort((a,b)=>byName(a,b)||(a.target||'9999').localeCompare(b.target||'9999'));
+  const skills=state.skills.filter(k=>!f||k.menteeId===f).sort((a,b)=>byName(a,b)||a.skill.localeCompare(b.skill));
+  const gt=goals.length?'<div class="scroll"><table><thead><tr><th>Person</th><th>Goal</th><th>Area</th><th>Target</th><th>Progress</th><th>Status</th><th></th></tr></thead><tbody>'+
+    goals.map(g=>'<tr class="'+(g.status==='Achieved'?'is-done':'')+'"><td>'+esc(mName(g.menteeId))+'</td><td>'+esc(g.title)+'</td><td>'+esc(g.area)+'</td><td class="num '+(g.status==='In progress'&&g.target&&g.target<today?'late':'')+'">'+fmt(g.target)+'</td>'+
+    '<td style="min-width:130px"><div class="bar"><i style="width:'+(+g.progress||0)+'%"></i></div><input class="rate" style="width:70px;margin-top:4px" type="number" min="0" max="100" data-act="goal-progress" data-id="'+g.id+'" value="'+(+g.progress||0)+'" aria-label="Progress percent for '+esc(g.title)+'"> %</td><td>'+pill(g.status)+'</td><td>'+actions('goal',g.id)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="empty">No goals yet. Add a growth goal for someone you mentor.</p>';
+  const st=skills.length?'<div class="scroll"><table><thead><tr><th>Person</th><th>Skill</th><th>Now and target</th><th>Gap</th><th></th></tr></thead><tbody>'+
+    skills.map(k=>{const gap=k.target-k.level;return '<tr><td>'+esc(mName(k.menteeId))+'</td><td>'+esc(k.skill)+'</td><td>'+lvlHtml(k.level,k.target)+' <span class="sub">'+k.level+' now, '+k.target+' target</span></td><td>'+(gap>0?'<span class="pill warn">'+gap+(gap===1?' level':' levels')+' to go</span>':'<span class="pill ok">On target</span>')+'</td><td>'+actions('skill',k.id)+'</td></tr>'}).join('')+'</tbody></table></div>':'<p class="empty">No skills tracked yet. The ringed square marks the target level.</p>';
+  return tb+'<section class="panel"><h2>Growth goals</h2>'+gt+'</section><section class="panel" style="margin-top:16px"><h2>Skills <span>Filled squares are the current level, the ringed square is the target</span></h2>'+st+'</section>';
+}
+
+function viewFeedback(){
+  const tb=mToolbar(true,addBtn('feedback','Add feedback',1));
+  if(!state.mentees.length)return tb+mEmpty();
+  const f=ui.mMentee,since=addDays(today,-90);
+  const list=state.feedback.filter(x=>!f||x.menteeId===f).sort((a,b)=>b.date.localeCompare(a.date));
+  const table=list.length?'<div class="scroll"><table><thead><tr><th>Date</th><th>Person</th><th>Type</th><th>Feedback</th><th></th></tr></thead><tbody>'+
+    list.map(x=>'<tr><td class="num">'+fmtY(x.date)+'</td><td>'+esc(mName(x.menteeId))+'</td><td>'+pill(x.type)+'</td><td class="wrap-text">'+esc(x.text)+'</td><td>'+actions('feedback',x.id)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="empty">No feedback logged yet. Capture recognition and coaching points while they are fresh.</p>';
+  const bal=[...state.mentees].sort((a,b)=>lastFeedback(a.id).localeCompare(lastFeedback(b.id))).map(m=>{
+    const fb=state.feedback.filter(x=>x.menteeId===m.id&&x.date>=since),lf=lastFeedback(m.id),stale=!lf||diffDays(lf,today)>60;
+    return '<tr><td>'+esc(m.name)+'</td><td class="num">'+fb.filter(x=>x.type==='Recognition').length+'</td><td class="num">'+fb.filter(x=>x.type==='Constructive').length+'</td><td class="num '+(stale?'late':'')+'">'+(lf?fmt(lf):'None')+'</td></tr>'}).join('');
+  return tb+'<div class="grid"><section class="panel s7"><h2>Feedback and recognition log</h2>'+table+'</section>'+
+    '<section class="panel s5"><h2>Last 90 days <span>Longest gap first</span></h2><div class="scroll"><table><thead><tr><th>Person</th><th>Recognition</th><th>Constructive</th><th>Last</th></tr></thead><tbody>'+bal+'</tbody></table></div><p class="sub" style="margin-top:10px;max-width:none">Dates in red mean nothing logged for 60 days.</p></section></div>';
+}
+
+function viewMentoring(){
+  if(ui.mTab==='availability')ui.mTab='team';
+  return ({team:viewMentTeam,oneonones:viewOneOnOnes,growth:viewGrowth,feedback:viewFeedback})[ui.mTab]();
+}
+
+function viewCapacity(){
+  const names=[...new Set(state.resources.map(r=>(r.name||'').trim()).filter(Boolean))].sort();
+  if(!names.length)return '<section class="panel"><p class="empty">Add resources on the Timesheet tab to see capacity across projects.</p></section>';
+  const start=ui.capWeek||monday(today);
+  const weeks=[];for(let i=0;i<8;i++)weeks.push(addDays(start,i*7));
+  const rows=names.map(name=>{
+    const mine=state.resources.filter(r=>(r.name||'').trim()===name);
+    const cells=weeks.map(wk=>{
+      let pct=0;mine.forEach(r=>{pct+=+allocOf(r.id,wk).pct||0});
+      const cls=pct>100?'cap-over':pct>=90?'cap-hot':'';
+      return '<td class="num '+cls+'">'+(pct?pct+'%':'–')+'</td>';
+    }).join('');
+    const tot=weeks.reduce((s,wk)=>s+mine.reduce((a,r)=>a+(+allocOf(r.id,wk).pct||0),0),0);
+    return '<tr><td><strong>'+esc(name)+'</strong><div class="sub">'+mine.length+' assignment'+(mine.length===1?'':'s')+'</div></td>'+cells+'<td class="num">'+(tot?Math.round(tot/weeks.length)+'% avg':'–')+'</td></tr>';
+  }).join('');
+  return '<div class="toolbar"><button class="btn sm" data-act="cap-week" data-v="-1">← Prev</button><button class="btn sm" data-act="cap-week" data-v="0">This week</button><button class="btn sm" data-act="cap-week" data-v="1">Next →</button><span class="sub">Plan % summed across projects. Red = over 100%.</span></div>'+
+    '<section class="panel"><h2>Capacity <span>8 weeks from '+esc(fmt(start))+'</span></h2><div class="scroll"><table><thead><tr><th>Person</th>'+
+    weeks.map(w=>'<th class="num">'+esc(fmt(w))+'</th>').join('')+'<th class="num">Avg</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>';
+}
+
+function monthRollup(){
+  const map=new Map();
+  state.projects.forEach(p=>{
+    projectMonthBudget(p).forEach(x=>{
+      let m=map.get(x.m.key);if(!m){m={key:x.m.key,ph:0,ah:0,pc:0,ac:0};map.set(x.m.key,m)}
+      m.ph+=x.ph;m.ah+=x.ah;m.pc+=x.pc;m.ac+=x.ac;
+    });
+  });
+  return [...map.values()].sort((a,b)=>a.key.localeCompare(b.key));
+}
+function forecastHtml(){
+  const rows=monthRollup(),cur=sharedCurrency(state.projects);
+  if(!rows.length)return '<p class="empty">No months in project date ranges yet.</p>';
+  return (cur==null?'<p class="sub" style="margin-bottom:10px">Cost columns are hidden because projects use different currencies. Hours still combine across projects.</p>':'')+
+    '<div class="scroll"><table><thead><tr><th>Month</th><th>Planned hours</th><th>Actual hours</th>'+(cur==null?'':'<th>Planned cost</th><th>Actual spent</th>')+'<th>Hours vs plan</th></tr></thead><tbody>'+
+    rows.map(m=>{const pct=m.ph?Math.round(100*m.ah/m.ph):0;
+      return '<tr><td>'+esc(m.key)+'</td><td class="num">'+hh(m.ph)+'</td><td class="num">'+hh(m.ah)+'</td>'+(cur==null?'':'<td class="num">'+money(m.pc,undefined,cur)+'</td><td class="num">'+money(m.ac,undefined,cur)+'</td>')+'<td style="min-width:110px"><div class="bar'+(pct>100?' over':'')+'"><i style="width:'+Math.min(pct,100)+'%"></i></div><span class="sub">'+pct+'%</span></td></tr>'}).join('')+
+    '</tbody></table></div>';
+}
+
+function render(){
+  document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===ui.tab)));
+  $('#view').innerHTML=({overview:viewOverview,projects:viewProjects,tasks:viewTasks,timesheet:viewTimesheet,absences:viewAbsences,capacity:viewCapacity,timeline:viewTimeline,finances:viewFinances,risks:viewRisks,mentoring:viewMentoring})[ui.tab]();
+  if(ui.tab==='tasks')renderTaskBody();
+  if(ui.tab==='timesheet')updatePlanTotals();
+}
+
+/* ---------- forms ---------- */
+const projOpts=()=>sortedProjects().map(p=>[p.id,p.name]);
+const FORMS={
+  project:{label:'project',list:'projects',fields:[
+    {k:'name',l:'Name',t:'text',req:1,w:1},{k:'owner',l:'Owner',t:'text'},{k:'status',l:'Status',t:'select',o:()=>PROJ_STATUS},
+    {k:'start',l:'Start date',t:'date'},{k:'end',l:'End date',t:'date'},{k:'budgetEnd',l:'Budget horizon (optional)',t:'date'},
+    {k:'currency',l:'Currency',t:'select',o:()=>CURRENCY_OPTS},{k:'budget',l:'Budget',t:'number'},{k:'spent',l:'Opening spend (before tracking here)',t:'number'},{k:'notes',l:'Notes',t:'textarea',w:1}],
+    def:()=>({name:'',owner:'',status:'On track',start:today,end:addDays(today,60),budgetEnd:'',currency:'',budget:0,spent:0,notes:''})},
+  task:{label:'task',list:'tasks',fields:[
+    {k:'title',l:'Task',t:'text',req:1,w:1},{k:'projectId',l:'Project',t:'select',o:projOpts},{k:'owner',l:'Owner',t:'text'},
+    {k:'status',l:'Status',t:'select',o:()=>TASK_STATUS},{k:'priority',l:'Priority',t:'select',o:()=>PRIORITY},{k:'due',l:'Due date',t:'date'},{k:'notes',l:'Notes',t:'textarea',w:1}],
+    def:()=>({title:'',projectId:ui.fProject||(state.projects[0]||{}).id,owner:ui.fOwner||'',status:'To do',priority:'Medium',due:'',notes:''})},
+  risk:{label:'risk',list:'risks',fields:[
+    {k:'title',l:'Risk',t:'text',req:1,w:1},{k:'projectId',l:'Project',t:'select',o:projOpts},{k:'owner',l:'Owner',t:'text'},
+    {k:'impact',l:'Impact',t:'select',num:1,o:()=>LEVEL},{k:'likelihood',l:'Likelihood',t:'select',num:1,o:()=>LEVEL},{k:'status',l:'Status',t:'select',o:()=>RISK_STATUS},
+    {k:'mitigation',l:'Mitigation plan',t:'textarea',w:1}],
+    def:()=>({title:'',projectId:(state.projects[0]||{}).id,owner:'',impact:2,likelihood:2,status:'Open',mitigation:''})},
+  milestone:{label:'milestone',list:'milestones',fields:[
+    {k:'title',l:'Milestone',t:'text',req:1,w:1},{k:'projectId',l:'Project',t:'select',o:projOpts},{k:'date',l:'Date',t:'date',req:1}],
+    def:()=>({title:'',projectId:(state.projects[0]||{}).id,date:addDays(today,14),done:false})},
+  expense:{label:'expense',list:'expenses',fields:[
+    {k:'description',l:'Description',t:'text',req:1,w:1},{k:'projectId',l:'Project',t:'select',o:projOpts},{k:'category',l:'Category',t:'select',o:()=>EXP_CATS},
+    {k:'date',l:'Date',t:'date',req:1},{k:'amount',l:'Amount',t:'number',req:1}],
+    def:()=>({description:'',projectId:ui.fxProject||(state.projects[0]||{}).id,category:'Other',date:today,amount:0})},
+  mentee:{label:'person',list:'mentees',fields:[
+    {k:'name',l:'Name',t:'text',req:1,w:1},{k:'role',l:'Role',t:'text'},{k:'cadence',l:'1:1 cadence',t:'select',o:()=>Object.keys(CAD)},
+    {k:'since',l:'On the team since',t:'date'},{k:'notes',l:'Private notes',t:'textarea',w:1}],
+    def:()=>({name:'',role:'',cadence:'Fortnightly',since:today,notes:''})},
+  oneonone:{label:'1:1 note',list:'oneonones',fields:[
+    {k:'menteeId',l:'Person',t:'select',o:mOpts},{k:'date',l:'Date',t:'date',req:1},{k:'notes',l:'Notes',t:'textarea',w:1,rows:7}],
+    def:()=>({menteeId:ui.mMentee||(state.mentees[0]||{}).id,date:today,notes:''})},
+  action:{label:'action item',list:'actions',fields:[
+    {k:'text',l:'Action',t:'text',req:1,w:1},{k:'menteeId',l:'Person',t:'select',o:mOpts},{k:'owner',l:'Owner',t:'select',o:()=>['Me','Mentee']},{k:'due',l:'Due date',t:'date'}],
+    def:()=>({text:'',menteeId:ui.mMentee||(state.mentees[0]||{}).id,owner:'Me',due:'',done:false})},
+  goal:{label:'goal',list:'goals',fields:[
+    {k:'title',l:'Goal',t:'text',req:1,w:1},{k:'menteeId',l:'Person',t:'select',o:mOpts},{k:'area',l:'Area',t:'select',o:()=>AREAS},
+    {k:'target',l:'Target date',t:'date'},{k:'progress',l:'Progress (%)',t:'number',max:100},{k:'status',l:'Status',t:'select',o:()=>GOAL_STATUS}],
+    def:()=>({title:'',menteeId:ui.mMentee||(state.mentees[0]||{}).id,area:'Technical',target:addDays(today,90),progress:0,status:'In progress'})},
+  skill:{label:'skill',list:'skills',fields:[
+    {k:'skill',l:'Skill',t:'text',req:1,w:1},{k:'menteeId',l:'Person',t:'select',o:mOpts},{k:'level',l:'Current level',t:'select',num:1,o:()=>LVL5},{k:'target',l:'Target level',t:'select',num:1,o:()=>LVL5}],
+    def:()=>({skill:'',menteeId:ui.mMentee||(state.mentees[0]||{}).id,level:2,target:3})},
+  feedback:{label:'feedback',list:'feedback',fields:[
+    {k:'menteeId',l:'Person',t:'select',o:mOpts},{k:'type',l:'Type',t:'select',o:()=>FB_TYPES},{k:'date',l:'Date',t:'date',req:1},
+    {k:'text',l:'Feedback',t:'textarea',req:1,w:1,rows:4}],
+    def:()=>({menteeId:ui.mMentee||(state.mentees[0]||{}).id,type:'Recognition',date:today,text:''})},
+  leave:{label:'time away',list:'leave',fields:[
+    {k:'menteeId',l:'Person',t:'select',o:mOpts},{k:'type',l:'Type',t:'select',o:()=>LEAVE_TYPES},{k:'start',l:'From',t:'date',req:1},{k:'end',l:'To',t:'date',req:1}],
+    def:()=>({menteeId:ui.mMentee||(state.mentees[0]||{}).id,type:'Leave',start:today,end:today})},
+  resource:{label:'resource',list:'resources',fields:[
+    {k:'category',l:'Category',t:'text',req:1,list:'catlist'},{k:'name',l:'Resource',t:'text',req:1,list:'ownerlist'},
+    {k:'rate',l:'Hourly rate',t:'number',req:1},{k:'hpw',l:'Hours per week (at 100%)',t:'number',req:1},
+    {k:'holidayRegion',l:'Holiday region',t:'select',o:regionOpts}],
+    def:()=>({projectId:ui.tsProject,category:'Development',name:'',rate:0,hpw:45,holidayRegion:'india'})}
+};
+function fieldHTML(f,val){
+  const id='f_'+f.k;let inp;
+  if(f.t==='select')inp='<select name="'+f.k+'" id="'+id+'">'+opts(f.o(),val)+'</select>';
+  else if(f.t==='textarea')inp='<textarea name="'+f.k+'" id="'+id+'" rows="'+(f.rows||3)+'"'+(f.req?' required':'')+'>'+esc(val)+'</textarea>';
+  else inp='<input name="'+f.k+'" id="'+id+'" type="'+f.t+'" value="'+esc(val)+'"'+(f.req?' required':'')+(f.t==='number'?' min="0"'+(f.max?' max="'+f.max+'"':'')+' step="any"':'')+(f.k==='owner'?' list="ownerlist"':'')+(f.list?' list="'+f.list+'"':'')+'>';
+  return '<div class="field'+(f.w?' wide':'')+'"><label for="'+id+'">'+f.l+(f.req?' (required)':'')+'</label>'+inp+'</div>';
+}
+function openForm(kind,id){
+  const F=FORMS[kind];
+  if(['task','risk','milestone','expense','resource'].includes(kind)&&!state.projects.length){toast('Add a project first.');return}
+  if(['oneonone','action','goal','skill','feedback','leave'].includes(kind)&&!state.mentees.length){toast('Add a person on the Team tab first.');return}
+  const item=id?state[F.list].find(x=>x.id===id):F.def();
+  if(!item)return;
+  if(kind==='resource'&&!item.holidayRegion)item.holidayRegion=personRegionId(item.name)||'india';
+  $('#ownerlist').innerHTML=owners().map(o=>'<option value="'+esc(o)+'">').join('');
+  $('#catlist').innerHTML=[...new Set(['Development','Design','Testing','Infra','PM','Business analysis',...state.resources.map(r=>r.category)])].map(o=>'<option value="'+esc(o)+'">').join('');
+  const dlg=$('#dlg');
+  dlg.innerHTML='<form><h2 id="dlgTitle">'+(id?'Edit ':'Add ')+F.label+'</h2><div class="fields">'+F.fields.map(f=>fieldHTML(f,item[f.k]==null?'':item[f.k])).join('')+'</div>'+
+    '<div class="dlg-actions"><button type="button" class="btn" data-act="close">Cancel</button><button type="submit" class="btn primary">Save '+F.label+'</button></div></form>';
+  dlg.setAttribute('aria-labelledby','dlgTitle');
+  $('form',dlg).addEventListener('submit',ev=>{
+    ev.preventDefault();
+    const fd=new FormData(ev.target),obj=Object.assign({},item);
+    F.fields.forEach(f=>{let v=fd.get(f.k);v=v==null?'':v;if(f.num)v=Number(v);else if(f.t==='number')v=v===''?0:Number(v);else v=String(v).trim();obj[f.k]=v});
+    if((kind==='project'||kind==='leave')&&obj.start&&obj.end&&obj.end<obj.start){toast('End date must be on or after the start date.');return}
+    if(kind==='goal')obj.progress=Math.max(0,Math.min(100,Number(obj.progress)||0));
+    const datesChanged=kind==='project'&&id&&(item.start!==obj.start||item.end!==obj.end||item.budgetEnd!==obj.budgetEnd);
+    if(kind==='resource'){
+      obj.holidayRegion=obj.holidayRegion==='default'?'india':(obj.holidayRegion||'india');
+      if(!regions().some(r=>r.id===obj.holidayRegion))obj.holidayRegion='india';
+    }
+    if(id)Object.assign(state[F.list].find(x=>x.id===id),obj);else{obj.id=uid();state[F.list].push(obj)}
+    if(kind==='project'){
+      const saved=id?state.projects.find(x=>x.id===id):obj;
+      if(datesChanged||!id)syncPlanForProject(saved);
+    }
+    if(kind==='resource'){
+      const saved=id?state.resources.find(x=>x.id===id):obj;
+      const nk=personKey(saved.name);
+      if(nk){
+        if(!state.settings.personRegion)state.settings.personRegion={};
+        state.settings.personRegion[nk]=saved.holidayRegion||'india';
+        state.resources.forEach(r=>{if(personKey(r.name)===nk)r.holidayRegion=saved.holidayRegion||'india'});
+      }
+    }
+    save();dlg.close();render();
+    toast(datesChanged?'Project dates saved — timesheet plan recalculated.':F.label.charAt(0).toUpperCase()+F.label.slice(1)+' saved.');
+  });
+  dlg.showModal();
+  const first=$('input,select,textarea',dlg);if(first)first.focus();
+}
+function remove(kind,id){
+  const F=FORMS[kind];
+  const msg=kind==='project'?'Delete this project and all of its tasks, risks, milestones, expenses and resource plan?':kind==='mentee'?'Delete this person and all of their 1:1 notes, actions, goals, skills, feedback and time away?':kind==='resource'?'Delete this resource and all of its planned and actual hours?':'Delete this '+F.label+'?';
+  if(!confirm(msg))return;
+  state[F.list]=state[F.list].filter(x=>x.id!==id);
+  if(kind==='project'){state.resources.filter(r=>r.projectId===id).forEach(r=>dropAlloc(r.id));['tasks','risks','milestones','expenses','resources'].forEach(l=>state[l]=state[l].filter(x=>x.projectId!==id));if(ui.fProject===id)ui.fProject=''}
+  if(kind==='resource')dropAlloc(id);
+  if(kind==='mentee'){['oneonones','actions','goals','skills','feedback','leave'].forEach(l=>state[l]=state[l].filter(x=>x.menteeId!==id));if(ui.mMentee===id)ui.mMentee=''}
+  save();render();toast(F.label.charAt(0).toUpperCase()+F.label.slice(1)+' deleted.');
+}
+
+/* ---------- import / export ---------- */
+function download(name,text,type){
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),800);
+}
+const csvCell=v=>{v=String(v==null?'':v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+function parseCSV(text){
+  text=text.replace(/^\uFEFF/,'');
+  const rows=[];let row=[],cur='',q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){cur+='"';i++}else q=false}else cur+=c}
+    else if(c==='"')q=true;
+    else if(c===','){row.push(cur);cur=''}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cur);rows.push(row);row=[];cur=''}
+    else cur+=c}
+  if(cur!==''||row.length){row.push(cur);rows.push(row)}
+  return rows.filter(r=>r.some(x=>x.trim()!==''));
+}
+function normDate(s){
+  s=(s||'').trim();if(!s)return'';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+  const d=new Date(s);return isNaN(d)?'':iso(d);
+}
+const pick=(v,list,def)=>list.find(x=>x.toLowerCase()===String(v||'').trim().toLowerCase())||def;
+function importCSV(text){
+  const rows=parseCSV(text);if(rows.length<2){toast('That CSV has no data rows.');return}
+  const head=rows[0].map(h=>h.trim().toLowerCase());
+  const col=n=>head.indexOf(n);
+  if(col('title')<0){toast('The CSV needs a “title” column.');return}
+  let added=0,newProj=0;
+  rows.slice(1).forEach(r=>{
+    const g=n=>col(n)<0?'':(r[col(n)]||'').trim();
+    if(!g('title'))return;
+    let proj=state.projects.find(p=>p.name.toLowerCase()===g('project').toLowerCase());
+    if(!proj){proj={id:uid(),name:g('project')||'Imported tasks',owner:'',status:'On track',start:today,end:addDays(today,60),budgetEnd:'',currency:'',budget:0,spent:0,notes:''};
+      const again=state.projects.find(p=>p.name===proj.name);if(again)proj=again;else{state.projects.push(proj);newProj++}}
+    state.tasks.push({id:uid(),projectId:proj.id,title:g('title'),owner:g('owner'),status:pick(g('status'),TASK_STATUS,'To do'),priority:pick(g('priority'),PRIORITY,'Medium'),due:normDate(g('due')),notes:g('notes')});
+    added++;
+  });
+  save();render();toast('Imported '+added+' tasks'+(newProj?' and created '+newProj+' project'+(newProj>1?'s':''):'')+'.');
+}
+
+/* ---------- auto backup (IndexedDB, last 14 days) ---------- */
+function queueAutoBackup(){
+  try{
+    if(state.settings.lastAutoBackup===today)return;
+    state.settings.lastAutoBackup=today;
+    saveLocal();
+    idbSet('backup:'+today,JSON.stringify(state)).then(()=>idbTrimBackups()).catch(()=>{});
+  }catch(e){}
+}
+async function idbTrimBackups(){
+  try{
+    const db=await idb();
+    const keys=await new Promise((res,rej)=>{const q=db.transaction('h','readonly').objectStore('h').getAllKeys();q.onsuccess=()=>res(q.result||[]);q.onerror=()=>rej(q.error)});
+    const backs=keys.filter(k=>String(k).startsWith('backup:')).map(String).sort();
+    const drop=backs.slice(0,Math.max(0,backs.length-14));
+    for(const k of drop)await idbDel(k);
+  }catch(e){}
+}
+async function listAutoBackups(){
+  try{
+    const db=await idb();
+    const keys=await new Promise((res,rej)=>{const q=db.transaction('h','readonly').objectStore('h').getAllKeys();q.onsuccess=()=>res(q.result||[]);q.onerror=()=>rej(q.error)});
+    return keys.filter(k=>String(k).startsWith('backup:')).map(k=>String(k).slice(7)).sort().reverse();
+  }catch(e){return []}
+}
+function exportMonthCsv(ym){
+  if(!ym||!/^\d{4}-\d{2}$/.test(ym)){toast('Pick a month as YYYY-MM.');return}
+  const rows=[['month','project','category','resource','week starting','plan %','planned hours','actual hours','planned cost','actual spent']];
+  state.resources.forEach(r=>{
+    const p=state.projects.find(x=>x.id===r.projectId)||{};
+    weeksOf(p).filter(w=>monthKey(w.from)===ym).forEach(w=>{
+      const a=allocOf(r.id,w.key),ph=((+a.pct||0)/100)*(+r.hpw||0)*w.factor,ah=+a.actual||0;
+      if(!a.pct&&!ah)return;
+      rows.push([ym,pName(r.projectId),r.category,r.name,w.key,a.pct||0,ph,ah,ph*(+r.rate||0),ah*(+r.rate||0)]);
+    });
+  });
+  if(rows.length<2){toast('No timesheet rows for '+ym+'.');return}
+  download('limelight-month-'+ym+'.csv','\uFEFF'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'),'text/csv');
+  toast('Exported '+ym+'.');
+}
+function openQuickActuals(){
+  const p=state.projects.find(x=>x.id===ui.tsProject);if(!p)return;
+  const wk=monday(today),res=resOf(p.id);
+  if(!res.length){toast('Add a resource first.');return}
+  const dlg=$('#dlg');
+  dlg.innerHTML='<form><h2 id="dlgTitle">Log actual hours</h2><p class="sub">Week of '+esc(fmt(wk))+' · '+esc(p.name)+'</p><div class="fields">'+
+    res.map(r=>'<div class="field"><label for="qa_'+r.id+'">'+esc(r.name)+'</label><input id="qa_'+r.id+'" name="'+r.id+'" type="number" min="0" step="0.5" value="'+(allocOf(r.id,wk).actual||'')+'"></div>').join('')+
+    '</div><div class="dlg-actions"><button type="button" class="btn" data-act="close">Cancel</button><button type="submit" class="btn primary">Save hours</button></div></form>';
+  $('form',dlg).addEventListener('submit',ev=>{
+    ev.preventDefault();const fd=new FormData(ev.target);
+    res.forEach(r=>{let v=parseFloat(fd.get(r.id));if(!(v>0))v=0;setAlloc(r.id,wk,'actual',v)});
+    save();dlg.close();render();toast('Actuals saved for this week.');
+  });
+  dlg.showModal();
+}
+function savePlanTemplate(){
+  const p=state.projects.find(x=>x.id===ui.tsProject)||sortedProjects()[0];
+  if(!p){toast('Open a timesheet project first.');return}
+  const res=resOf(p.id);if(!res.length){toast('Add resources before saving a template.');return}
+  const name=prompt('Template name',p.name+' plan');if(!name)return;
+  const resources=res.map(r=>({category:r.category,name:r.name,rate:r.rate,hpw:r.hpw,pct:prevailingPct(r.id)||0}));
+  state.settings.templates=state.settings.templates||[];
+  state.settings.templates.push({id:uid(),name:name.trim().slice(0,80),resources});
+  save();toast('Template saved.');
+}
+function applyPlanTemplate(pid){
+  const p=state.projects.find(x=>x.id===pid);if(!p)return;
+  const tpls=state.settings.templates||[];
+  if(!tpls.length){toast('No templates yet. Use “Save plan template” on Projects or Timesheet.');return}
+  const dlg=$('#dlg');
+  dlg.innerHTML='<div class="dlg"><h2 id="dlgTitle">Apply template to '+esc(p.name)+'</h2><div class="datalist">'+
+    tpls.map(t=>'<button class="btn" data-act="apply-tpl-id" data-tid="'+t.id+'" data-id="'+p.id+'">'+esc(t.name)+'<small>'+t.resources.length+' resources</small></button>').join('')+
+    '</div><div class="dlg-actions"><button type="button" class="btn" data-act="close">Cancel</button></div></div>';
+  dlg.showModal();
+}
+function applyTemplateById(pid,tid){
+  const p=state.projects.find(x=>x.id===pid),t=(state.settings.templates||[]).find(x=>x.id===tid);
+  if(!p||!t)return;
+  t.resources.forEach(src=>{
+    let r=resOf(p.id).find(x=>x.name===src.name&&x.category===src.category);
+    if(!r){r={id:uid(),projectId:p.id,category:src.category,name:src.name,rate:src.rate,hpw:src.hpw};state.resources.push(r)}
+    if(src.pct>0)applyPctToWeeks(r.id,weeksOf(p),src.pct);
+  });
+  $('#dlg').close();save();render();toast('Template applied.');
+}
+async function openBackupList(){
+  const days=await listAutoBackups();
+  const dlg=$('#dlg');
+  if(!days.length){toast('No auto-backups yet. They are created on the first save each day.');return}
+  dlg.innerHTML='<div class="dlg"><h2 id="dlgTitle">Restore auto-backup</h2><p class="sub">Replaces current data with the selected daily snapshot.</p><div class="datalist">'+
+    days.map(d=>'<button class="btn" data-act="restore-backup" data-day="'+d+'">'+d+'</button>').join('')+
+    '</div><div class="dlg-actions"><button type="button" class="btn" data-act="close">Cancel</button></div></div>';
+  dlg.showModal();
+}
+async function restoreBackupDay(day){
+  try{
+    const raw=await idbGet('backup:'+day);if(!raw){toast('Backup not found.');return}
+    const s=typeof raw==='string'?JSON.parse(raw):raw;
+    if(!s||!Array.isArray(s.projects)){toast('Backup is invalid.');return}
+    if(!confirm('Replace all current data with the backup from '+day+'?'))return;
+    state=normalize(s);save();$('#dlg').close();render();toast('Restored backup from '+day+'.');
+  }catch(e){toast('Could not restore that backup.')}
+}
+
+/* ---------- toast ---------- */
+let toastTimer;
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3200)}
+
+/* ---------- storage: optional data file (File System Access API: Chrome, Edge) ---------- */
+const FS={ok:typeof window.showOpenFilePicker==='function'&&typeof window.showSaveFilePicker==='function',
+  h:null,name:'',state:'none',lastSeen:0,lastText:'',dirty:false,timer:null,writing:false,pending:false,conflictText:''};
+const FS_META='limelight-fs-meta',FS_TYPES=[{description:'Limelight data (JSON)',accept:{'application/json':['.json']}}];
+const fsMeta=()=>{try{return JSON.parse(localStorage.getItem(FS_META))||{}}catch(e){return {}}};
+function fsSaveMeta(){try{if(FS.h)localStorage.setItem(FS_META,JSON.stringify({name:FS.name,lastSeen:FS.lastSeen,dirty:FS.dirty}));else localStorage.removeItem(FS_META)}catch(e){}}
+function idb(){return new Promise((res,rej)=>{const r=indexedDB.open('limelight-fs',1);r.onupgradeneeded=()=>r.result.createObjectStore('h');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+async function idbOp(mode,fn){const db=await idb();return new Promise((res,rej)=>{const q=fn(db.transaction('h',mode).objectStore('h'));q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
+const idbGet=k=>idbOp('readonly',o=>o.get(k)),idbSet=(k,v)=>idbOp('readwrite',o=>o.put(v,k)),idbDel=k=>idbOp('readwrite',o=>o.delete(k));
+function fsParse(t){try{const x=JSON.parse(t);return x&&Array.isArray(x.projects)?x:null}catch(e){return null}}
+function fsStatus(){
+  const el=$('#fileStatus');if(!el)return;
+  let t='Saved in this browser',c='';
+  if(FS.h){if(FS.state==='live')t=(FS.dirty||FS.writing)?'Saving to '+FS.name+'…':'Saved to '+FS.name;else{t='File paused: '+FS.name;c='warn'}}
+  el.textContent=t;el.className='fs '+c;
+}
+function fsBanner(show,html){const b=$('#fileBanner');if(!b)return;b.hidden=!show;b.innerHTML=show?html:''}
+function fsPaused(msg){
+  FS.state='paused';fsStatus();
+  fsBanner(true,'<span>'+esc(msg)+'</span><span><button class="btn sm primary" data-act="fs-reconnect">Reconnect</button> <button class="btn sm" data-act="fs-open">Choose another file</button> <button class="btn sm" data-act="fs-disconnect">Use this browser only</button></span>');
+}
+function fsConflict(){
+  FS.state='paused';fsStatus();
+  fsBanner(true,'<span>“'+esc(FS.name)+'” was changed elsewhere. Choose which version to keep.</span><span><button class="btn sm primary" data-act="fs-resolve">Choose version</button></span>');
+  fsConflictDialog();
+}
+function fsConflictDialog(){
+  const dlg=$('#dlg');
+  dlg.innerHTML='<div class="dlg"><h2 id="dlgTitle">Data file changed elsewhere</h2><p>“'+esc(FS.name)+'” was changed by another computer or browser since this browser last synced. Choose which version to keep.</p>'+
+    '<div class="datalist"><button class="btn" data-act="fs-use-file">Use the file’s version<small>Replaces the data in this browser with what is in the file.</small></button>'+
+    '<button class="btn" data-act="fs-use-mine">Keep this browser’s version<small>Overwrites the file with the data in this browser.</small></button>'+
+    '<button class="btn" data-act="export-json">Download this browser’s version first<small>Saves a JSON copy so nothing is lost, then choose above.</small></button></div></div>';
+  dlg.setAttribute('aria-labelledby','dlgTitle');if(!dlg.open)dlg.showModal();
+}
+function fsMarkDirty(){
+  if(!FS.h)return;
+  FS.dirty=true;fsSaveMeta();fsStatus();
+  if(FS.state==='live'){clearTimeout(FS.timer);FS.timer=setTimeout(fsFlush,500)}
+}
+async function fsFlush(){
+  if(FS.state!=='live'||!FS.h)return;
+  if(FS.writing){FS.pending=true;return}
+  FS.writing=true;fsStatus();
+  try{
+    const f=await FS.h.getFile();
+    if(f.lastModified!==FS.lastSeen){const t=await f.text();if(t!==FS.lastText){FS.writing=false;FS.conflictText=t;fsConflict();return}FS.lastSeen=f.lastModified}
+    const text=JSON.stringify(state,null,2),w=await FS.h.createWritable();
+    await w.write(text);await w.close();
+    const f2=await FS.h.getFile();FS.lastSeen=f2.lastModified;FS.lastText=text;
+    FS.dirty=JSON.stringify(state,null,2)!==text;fsSaveMeta();
+  }catch(e){fsPaused('Could not save to “'+FS.name+'”. Your changes are safe in this browser. Reconnect to resume saving to the file.')}
+  FS.writing=false;fsStatus();
+  if(FS.pending){FS.pending=false;if(FS.state==='live')fsFlush()}
+}
+async function fsConnect(){
+  try{
+    const f=await FS.h.getFile(),text=await f.text(),mine=JSON.stringify(state,null,2);
+    if(FS.dirty){
+      if(f.lastModified>FS.lastSeen+50&&text.trim()&&text!==mine){FS.conflictText=text;fsConflict();return}
+      FS.state='live';FS.lastSeen=f.lastModified;FS.lastText=text;fsBanner(false);fsStatus();await fsFlush();return;
+    }
+    FS.state='live';fsBanner(false);
+    if(!text.trim()){FS.lastSeen=f.lastModified;FS.lastText='';FS.dirty=true;fsSaveMeta();fsStatus();await fsFlush();return}
+    const x=fsParse(text);
+    if(!x){fsPaused('“'+FS.name+'” does not contain Limelight data.');return}
+    if(text!==mine){state=normalize(x);saveLocal();render()}
+    FS.lastSeen=f.lastModified;FS.lastText=text;fsSaveMeta();fsStatus();
+  }catch(e){fsPaused('Cannot read “'+FS.name+'”. It may have been moved or deleted.')}
+}
+async function fsInit(){
+  fsStatus();if(!FS.ok)return;
+  let h;try{h=await idbGet('data')}catch(e){}
+  if(!h)return;
+  const m=fsMeta();FS.h=h;FS.name=h.name;FS.lastSeen=m.lastSeen||0;FS.dirty=!!m.dirty;FS.state='paused';
+  let perm='prompt';try{perm=await h.queryPermission({mode:'readwrite'})}catch(e){}
+  if(perm==='granted')await fsConnect();else fsPaused('Click Reconnect to let Limelight keep saving to “'+FS.name+'”.');
+}
+async function fsReconnect(){
+  if(!FS.h)return;
+  try{if(await FS.h.requestPermission({mode:'readwrite'})!=='granted'){toast('Permission is needed to save to the file.');return}await fsConnect()}
+  catch(e){fsPaused('Cannot reach “'+FS.name+'”. It may have been moved or deleted.')}
+  fsPanelRefresh();
+}
+async function fsLink(h,f,text){
+  FS.h=h;FS.name=h.name;FS.state='live';FS.lastSeen=f?f.lastModified:0;FS.lastText=text;FS.dirty=false;fsSaveMeta();fsBanner(false);fsStatus();
+  try{await idbSet('data',h)}catch(e){toast('Connected, but this browser could not remember the file for next time.')}
+}
+async function fsOpen(){
+  try{
+    const arr=await window.showOpenFilePicker({types:FS_TYPES,multiple:false}),h=arr[0];
+    if(await h.requestPermission({mode:'readwrite'})!=='granted'){toast('Permission is needed to save to that file.');return}
+    const f=await h.getFile(),text=await f.text();
+    if(text.trim()){
+      const x=fsParse(text);if(!x){toast('That file does not contain Limelight data.');return}
+      if(!confirm('Load the data in “'+h.name+'”? It replaces what is currently in this browser, and changes will then save to that file automatically.'))return;
+      await fsLink(h,f,text);state=normalize(x);saveLocal();render();toast('Loaded '+h.name+'. Changes now save to it.');
+    }else{await fsLink(h,f,'');FS.dirty=true;fsSaveMeta();await fsFlush();toast('Saving to '+h.name+'.')}
+  }catch(e){if(!e||e.name!=='AbortError')toast('Could not open that file.')}
+  fsPanelRefresh();
+}
+async function fsCreate(){
+  try{
+    const h=await window.showSaveFilePicker({suggestedName:'limelight-data.json',types:FS_TYPES});
+    await fsLink(h,null,'');FS.dirty=true;fsSaveMeta();await fsFlush();toast('Saving to '+h.name+'.');
+  }catch(e){if(!e||e.name!=='AbortError')toast('Could not create that file.')}
+  fsPanelRefresh();
+}
+async function fsDisconnect(){
+  if(!confirm('Stop saving to “'+FS.name+'”? Your data stays in this browser and the file is left as it is.'))return;
+  clearTimeout(FS.timer);FS.h=null;FS.name='';FS.state='none';FS.dirty=false;fsSaveMeta();
+  try{await idbDel('data')}catch(e){}
+  fsBanner(false);fsStatus();fsPanelRefresh();toast('Saving in this browser only.');
+}
+async function fsUseFile(){
+  const x=fsParse(FS.conflictText);if(!x){toast('The file does not contain valid Limelight data.');return}
+  try{FS.lastSeen=(await FS.h.getFile()).lastModified}catch(e){}
+  state=normalize(x);saveLocal();FS.lastText=FS.conflictText;FS.dirty=false;FS.state='live';fsSaveMeta();fsBanner(false);fsStatus();
+  $('#dlg').close();render();toast('Loaded the file’s version.');
+}
+async function fsUseMine(){
+  try{FS.lastSeen=(await FS.h.getFile()).lastModified;FS.lastText=FS.conflictText}catch(e){}
+  FS.state='live';FS.dirty=true;fsBanner(false);$('#dlg').close();await fsFlush();toast('Overwrote the file with this browser’s data.');
+}
+async function fsRefresh(){
+  if(FS.state!=='live'||!FS.h||FS.dirty||FS.writing||document.querySelector('dialog[open]'))return;
+  try{
+    const f=await FS.h.getFile();if(f.lastModified===FS.lastSeen)return;
+    const text=await f.text();FS.lastSeen=f.lastModified;fsSaveMeta();
+    if(text!==FS.lastText){const x=fsParse(text);if(x){state=normalize(x);saveLocal();FS.lastText=text;render();toast('Loaded newer data from '+FS.name+'.')}}
+  }catch(e){}
+}
+function fsPanelHtml(){
+  const h3='<strong>Where your data is saved</strong>';
+  if(!FS.ok)return h3+'<p class="sub">In this browser only. This browser cannot save to a file you choose; Chrome and Edge can. Use Export and Import backup below to move data between computers, or open Limelight in Chrome or Edge for automatic file saving.</p>';
+  if(FS.h){
+    const live=FS.state==='live';
+    return h3+'<p class="sub">'+(live?'Saving automatically to <b>'+esc(FS.name)+'</b>. Keep that file in a OneDrive, Google Drive or Dropbox folder to share it between computers.':'Paused for <b>'+esc(FS.name)+'</b>. Reconnect to resume saving to it. Your changes are safe in this browser meanwhile.')+'</p>'+
+      '<div class="datalist">'+(live?'':'<button class="btn" data-act="fs-reconnect">Reconnect</button>')+'<button class="btn" data-act="fs-open">Open a different data file</button><button class="btn" data-act="fs-create">Create a new data file</button><button class="btn danger" data-act="fs-disconnect">Stop using this file</button></div>';
+  }
+  return h3+'<p class="sub">Right now: in this browser only. Choose a data file on your computer and Limelight saves to it automatically. Put the file in a OneDrive, Google Drive or Dropbox folder to share it across computers, and open the same file once on each computer.</p>'+
+    '<div class="datalist"><button class="btn" data-act="fs-open">Open an existing data file<small>Use this on a second computer, or to load a file you saved before.</small></button><button class="btn" data-act="fs-create">Create a new data file<small>Saves your current data into a new .json file in a folder you pick.</small></button></div>';
+}
+function fsPanelRefresh(){const p=$('#fsPanel');if(p)p.innerHTML=fsPanelHtml()}
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{
+  const tab=e.target.closest('[data-tab]');if(tab){ui.tab=tab.dataset.tab;render();return}
+  const a=e.target.closest('[data-act]');if(!a)return;
+  const {act,kind,id}=a.dataset;
+  switch(act){
+    case 'add':openForm(kind);break;
+    case 'edit':openForm(kind,id);break;
+    case 'del':remove(kind,id);break;
+    case 'close':$('#dlg').close();break;
+    case 'filter-project':ui.fProject=id;ui.fOwner='';ui.fStatus='';ui.q='';ui.tab='tasks';render();break;
+    case 'tv':ui.taskView=a.dataset.v;render();break;
+    case 'data':fsPanelRefresh();$('#dataDlg').showModal();break;
+    case 'fs-open':fsOpen();break;
+    case 'fs-create':fsCreate();break;
+    case 'fs-disconnect':fsDisconnect();break;
+    case 'fs-reconnect':fsReconnect();break;
+    case 'fs-resolve':fsConflictDialog();break;
+    case 'fs-use-file':fsUseFile();break;
+    case 'fs-use-mine':fsUseMine();break;
+    case 'mtab':ui.mTab=a.dataset.v;render();break;
+    case 'ts-grain':ui.tsGrain=['month','budget','estimate'].includes(a.dataset.v)?a.dataset.v:'week';render();break;
+    case 'cal-month':{
+      const d=a.dataset.delta;ui.calMonth=d==='0'?monthKey(today):shiftMonthKey(ui.calMonth||monthKey(today),+d||0);render();break}
+    case 'abs-mode':ui.absMode=a.dataset.v==='absence'?'absence':'holiday';render();break;
+    case 'abs-region':ui.absMode='holiday';ui.absRegion=a.dataset.id||'india';ui.tab='absences';render();break;
+    case 'abs-person':ui.absMode='absence';ui.absPerson=a.dataset.person||'';ui.tab='absences';render();break;
+    case 'add-region':addHolidayRegion();break;
+    case 'toff-toggle':toggleTimeOff(a.dataset.mode||'holiday',a.dataset.ref||'',a.dataset.date);break;
+    case 'filter-mentee':ui.mMentee=id;ui.mTab='oneonones';render();break;
+    case 'close-data':$('#dataDlg').close();break;
+    case 'export-json':download('limelight-backup-'+today+'.json',JSON.stringify(state,null,2),'application/json');break;
+    case 'import-json':$('#fileJson').click();break;
+    case 'import-csv':$('#fileCsv').click();break;
+    case 'export-csv':{
+      const rows=[['project','title','owner','status','priority','due','notes']].concat(state.tasks.map(t=>[pName(t.projectId),t.title,t.owner,t.status,t.priority,t.due,t.notes]));
+      download('limelight-tasks-'+today+'.csv','\uFEFF'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'),'text/csv');break}
+    case 'export-time':{
+      const rows=[['project','category','resource','hourly rate','hours per week','week starting','plan %','planned hours','actual hours','planned cost','actual spent']];
+      state.resources.forEach(r=>{const pre=r.id+'|';Object.keys(state.alloc).filter(k=>k.startsWith(pre)).sort().forEach(k=>{
+        const a=state.alloc[k],ph=(+a.pct||0)/100*(+r.hpw||0),ah=+a.actual||0;
+        rows.push([pName(r.projectId),r.category,r.name,r.rate,r.hpw,k.slice(pre.length),a.pct||0,ph,ah,ph*r.rate,ah*r.rate])})});
+      download('limelight-allocation-'+today+'.csv','\uFEFF'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'),'text/csv');break}
+    case 'export-exp':{
+      const rows=[['project','date','category','description','amount']].concat([...state.expenses].sort((x,y)=>x.date.localeCompare(y.date)).map(x=>[pName(x.projectId),x.date,x.category,x.description,x.amount]));
+      download('limelight-expenses-'+today+'.csv','\uFEFF'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'),'text/csv');break}
+    case 'export-month':{
+      const ym=prompt('Month to export (YYYY-MM)',monthKey(today));if(ym)exportMonthCsv(ym.trim());break}
+    case 'backup-now':
+      download('limelight-backup-'+today+'.json',JSON.stringify(state,null,2),'application/json');
+      state.settings.lastAutoBackup='';queueAutoBackup();toast('Backup downloaded.');break;
+    case 'backup-list':openBackupList();break;
+    case 'restore-backup':restoreBackupDay(a.dataset.day);break;
+    case 'toggle-pin':togglePin(id);break;
+    case 'budget-from-plan':setBudgetFromPlan(id);break;
+    case 'quick-actuals':openQuickActuals();break;
+    case 'save-template':savePlanTemplate();break;
+    case 'apply-template':applyPlanTemplate(id);break;
+    case 'apply-tpl-id':applyTemplateById(id,a.dataset.tid);break;
+    case 'cap-week':{
+      const v=a.dataset.v;if(v==='0')ui.capWeek=monday(today);
+      else ui.capWeek=addDays(ui.capWeek||monday(today),(+v||0)*7);
+      render();break}
+    case 'sample':if(confirm('Replace your current data with the sample data?')){state=normalize(sample());save();render();$('#dataDlg').close();toast('Sample data loaded.')}break;
+    case 'clear':if(confirm('Remove all projects, tasks, risks and milestones from this browser? Export a backup first if you may need them.')){state=normalize({});save();render();$('#dataDlg').close();toast('All data cleared.')}break;
+  }
+});
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.act==='status'){const x=state.tasks.find(k=>k.id===t.dataset.id);if(x){x.status=t.value;save();renderTaskBody()}return}
+  if(t.dataset.act==='ms-done'){const m=state.milestones.find(k=>k.id===t.dataset.id);if(m){m.done=t.checked;save();render()}return}
+  if(t.dataset.fld){
+    let v=parseFloat(t.value);if(!(v>0))v=0;
+    v=Math.round(v*100)/100;if(t.dataset.fld==='pct')v=Math.min(v,500);
+    if(t.dataset.fld==='pct'){
+      const p=state.projects.find(x=>x.id===ui.tsProject),weeks=weeksOf(p||{});
+      let targets=weeks;
+      if(t.dataset.grain==='month'&&!ui.tsFillAll){
+        const m=withMonthWeeks(calendarMonthsOf(p||{}),weeks).find(x=>x.key===t.dataset.m);
+        targets=m?m.weeks:[];
+      }else if(t.dataset.grain!=='month'&&!ui.tsFillAll){
+        targets=weeks.filter(w=>w.key===t.dataset.w);
+      }
+      applyPctToWeeks(t.dataset.r,targets,v);
+      document.querySelectorAll('input[data-fld="pct"][data-r="'+t.dataset.r+'"]').forEach(inp=>{
+        if(ui.tsFillAll){inp.value=v||'';return}
+        if(t.dataset.grain==='month'&&inp.dataset.m===t.dataset.m)inp.value=v||'';
+        if(t.dataset.grain!=='month'&&inp.dataset.w===t.dataset.w)inp.value=v||'';
+      });
+      t.value=v||'';save();updatePlanTotals();
+      if(v>100)toast('Above 100% means more than the standard hours per week.');
+      return;
+    }
+    if(t.dataset.fld==='actual'){
+      const share=parseFloat(t.dataset.share||'1')||1;
+      const stored=share>0?Math.round((v/share)*100)/100:v;
+      setAlloc(t.dataset.r,t.dataset.w,'actual',stored);
+      t.value=v||'';save();updatePlanTotals();
+      return;
+    }
+    setAlloc(t.dataset.r,t.dataset.w,t.dataset.fld,v);t.value=v||'';save();updatePlanTotals();
+    return}
+  if(t.dataset.act==='act-done'){const x=state.actions.find(k=>k.id===t.dataset.id);if(x){x.done=t.checked;save();render()}return}
+  if(t.dataset.act==='goal-progress'){const g=state.goals.find(k=>k.id===t.dataset.id);if(g){g.progress=Math.max(0,Math.min(100,Number(t.value)||0));if(g.progress===100)g.status='Achieved';save();render()}return}
+  if(t.id==='mFilter'){ui.mMentee=t.value;render();return}
+  if(t.id==='absPerson'){ui.absPerson=t.value;ui.absMode='absence';render();return}
+  if(t.id==='absRegion'){ui.absRegion=t.value;ui.absMode='holiday';render();return}
+  if(t.id==='personRegion'){setPersonRegion(ui.absPerson,t.value);return}
+  if(t.id==='tsFillAll'){ui.tsFillAll=t.checked;return}
+  if(t.id==='tsProject'){ui.tsProject=t.value;ui.tsMonth='';render();return}
+  if(t.id==='tsMonth'){ui.tsMonth=t.value;render();return}
+  if(t.dataset.act==='proj-date'){
+    const p=state.projects.find(x=>x.id===t.dataset.id);if(!p)return;
+    const fld=t.dataset.fld,val=t.value||'';
+    if(fld==='start'||fld==='end'){
+      const prev={start:p.start,end:p.end};p[fld]=val;
+      if(p.start&&p.end&&p.end<p.start){p.start=prev.start;p.end=prev.end;t.value=prev[fld]||'';toast('End date must be on or after the start date.');return}
+      syncPlanForProject(p);save();render();toast('Dates updated — timesheet plan recalculated.');
+    }
+    return;
+  }
+  if(t.id==='fxProject'){ui.fxProject=t.value;render();return}
+  if(['fProject','fOwner','fStatus'].includes(t.id)){ui[t.id]=t.value;renderTaskBody();return}
+  if(t.id==='fileJson'&&t.files[0]){
+    t.files[0].text().then(txt=>{try{const s=JSON.parse(txt);if(!s||!Array.isArray(s.projects))throw 0;
+      if(confirm('Replace the data on this computer with this backup?')){state=normalize(s);save();render();$('#dataDlg').close();toast('Backup restored.')}}
+      catch(err){toast('That file is not a Limelight backup.')}t.value=''});return}
+  if(t.id==='fileCsv'&&t.files[0]){t.files[0].text().then(txt=>{importCSV(txt);t.value='';$('#dataDlg').close()});return}
+});
+document.addEventListener('input',e=>{if(e.target.id==='q'){ui.q=e.target.value;renderTaskBody()}});
+
+/* drag and drop on the board */
+let dragId=null;
+document.addEventListener('dragstart',e=>{const c=e.target.closest&&e.target.closest('.card');if(!c)return;dragId=c.dataset.id;c.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',dragId)});
+document.addEventListener('dragend',e=>{document.querySelectorAll('.dragging,.col.over').forEach(n=>n.classList.remove('dragging','over'))});
+document.addEventListener('dragover',e=>{const c=e.target.closest&&e.target.closest('.col');if(c&&dragId){e.preventDefault();document.querySelectorAll('.col.over').forEach(n=>n.classList.remove('over'));c.classList.add('over')}});
+document.addEventListener('drop',e=>{const c=e.target.closest&&e.target.closest('.col');if(!c||!dragId)return;e.preventDefault();
+  const t=state.tasks.find(x=>x.id===dragId);if(t&&t.status!==c.dataset.status){t.status=c.dataset.status;save();toast('Moved to '+t.status+'.')}dragId=null;renderTaskBody()});
+
+render();
+fsInit();
+queueAutoBackup();
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible')fsRefresh();
+  else if(FS.h&&FS.dirty&&FS.state==='live'){clearTimeout(FS.timer);fsFlush()}
+});
+window.addEventListener('focus',fsRefresh);
+window.addEventListener('beforeunload',e=>{if(FS.h&&FS.state==='live'&&(FS.dirty||FS.writing)){e.preventDefault();e.returnValue=''}});
+})();
+</script>
+<script>
+/* Offline support and installability. Only runs when served over http(s), such as GitHub Pages. */
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})});
+}
+</script>
+</body>
+</html>

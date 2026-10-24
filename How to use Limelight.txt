@@ -1,0 +1,118 @@
+Limelight — How to use
+======================
+
+Limelight is a personal project, timesheet, finance and mentoring dashboard.
+It runs entirely in your browser. No install and no account are required.
+
+
+1. Open the app
+---------------
+1. Save limelight-dashboard.html somewhere easy to find (Desktop or OneDrive).
+2. Open it in Google Chrome or Microsoft Edge (recommended).
+   - Double-click the file, or drag it into a Chrome/Edge window.
+3. You may see sample/demo data the first time. You can keep it to explore,
+   replace it with your own work, or clear it (see section 4).
+
+
+2. Main tabs
+------------
+- Overview     — week summary, project health, tasks due, risks
+- Projects     — add/edit projects, dates, budget, pin favourites
+- Tasks        — task list and board
+- Timesheet    — people, plan %, weekly/monthly hours and cost
+- Capacity     — plan % by person across projects (overload in red)
+- Timeline     — project bars and milestones
+- Finances     — budget, expenses, labour, forecast vs actual
+- Risks        — risk log
+- Mentoring    — 1:1s, actions, goals, feedback, availability
+
+
+3. First setup (recommended)
+----------------------------
+1. Open Data and backup (top right).
+2. Choose Create a new data file (Chrome/Edge).
+3. Save it in OneDrive, Google Drive or Dropbox, e.g. limelight-my-data.json.
+4. From then on, Limelight saves to that file automatically.
+
+If file saving is not available in your browser, your data still stays in
+this browser. Use Export backup (JSON) regularly so you do not lose it.
+
+
+4. Your data
+------------
+- Data is private to your browser / your linked file. Other people cannot see it.
+- Export backup (JSON) — full copy of everything.
+- Import backup (JSON) — replace current data with a backup file.
+- Download daily backup now — save a dated copy; the app also keeps
+  automatic daily snapshots in this browser (last 14 days).
+- Clear all data — wipe this browser’s copy (export a backup first if needed).
+
+Do not share your .json data file unless you intend to share your projects.
+
+
+5. Everyday workflow
+--------------------
+Projects
+  - Add a project with start and end dates.
+  - Set Currency on each project (INR, USD, EUR, … or plain numbers).
+    Money on that project’s timesheet and finances uses its currency.
+  - Optional: set a Budget horizon if you plan cost only to a certain date
+    (for example Dec 2026) while the project runs longer.
+  - Use From plan / Set budget from plan to set Budget from timesheet cost.
+  - Star (pin) important projects so they stay at the top of lists.
+  - You can change start/end dates inline on the Projects table; the
+    timesheet plan recalculates.
+
+Timesheet
+  - Select a project, then Add resource (name, category, rate, hours/week,
+    Holiday region — India or Sweden). Edit or Remove on each resource row.
+  - Weekly / Monthly / Budget: switch period views above the grid.
+  - Enter Plan % for each week (or use Monthly view).
+  - Enter Actual hours in the shaded cells (or use Log this week).
+  - Use the Month dropdown to filter the Weekly grid to one calendar month.
+    Weeks that cross months are split (e.g. Week 49 → “30 Nov” in November
+    and “1–4 Dec” in December). Plan % is for the full week; planned and
+    actual hours shown are for the dates in that month only.
+  - Weekly view shows total planned hours and total actual hours for the
+    selected month (summary band and footer).
+  - Planned hours = plan % × hours per week (partial weeks are prorated).
+  - Planned cost = planned hours × rate.
+
+Absences (shared)
+  - Public holidays: calendars per region (India, Sweden, or Add region).
+    Mark holidays for a region; they apply to resources assigned to it.
+  - Assign a resource’s region on Timesheet → Edit resource → Holiday region
+    (or Absences → Personal absences → Holiday region).
+  - Personal absences: person calendar shows their region holidays (locked)
+    plus absences you mark. Weekdays only. Estimate uses region + absences.
+
+Timesheet → Estimate
+  - Planned hours/cost minus shared absences = estimated value.
+
+Finances
+  - Budget and spend by project.
+  - Forecast vs actual by month.
+
+
+6. Tips
+-------
+- Prefer Chrome or Edge for the best experience (linked data file).
+- Keep your data file in a cloud folder if you use more than one PC.
+  Open the same file once on each computer.
+- If two copies disagree, Limelight will ask which version to keep.
+- Currency is per project (edit the project). Cross-project money totals
+  only appear when every project uses the same currency.
+
+
+7. What this app does not do
+----------------------------
+- It does not upload your data to a shared server.
+- It does not sync by itself across browsers unless you use the same
+  linked file or import/export a backup.
+- Sample data is only for demonstration.
+
+
+Need help?
+----------
+Ask the person who sent you this file. Version shown in the page footer
+(e.g. Limelight v1.4.0).
