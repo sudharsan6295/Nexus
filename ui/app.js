@@ -51,6 +51,16 @@ function monthBounds(moment) {
   return [start, end];
 }
 
+function lastMonthBounds(moment) {
+  const start = new Date(moment.getFullYear(), moment.getMonth() - 1, 1);
+  const end = new Date(moment.getFullYear(), moment.getMonth(), 1);
+  return [start, end];
+}
+
+function monthLabel(moment) {
+  return moment.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+}
+
 function intervals(category, moment) {
   const found = [];
   for (const session of category.sessions || []) {
@@ -208,7 +218,9 @@ function playSvg(running) {
 }
 
 function rangeBounds(range, moment) {
-  return range === "month" ? monthBounds(moment) : weekBounds(moment);
+  if (range === "last_month") return lastMonthBounds(moment);
+  if (range === "month") return monthBounds(moment);
+  return weekBounds(moment);
 }
 
 function analyticsRows(range) {
@@ -319,14 +331,33 @@ function updateSessionLine() {
   session.textContent = parts.length ? `Today: ${parts.slice(-8).join(", ")}` : "Today: no time yet";
 }
 
+function analyticsCopy(range, moment) {
+  if (range === "last_month") {
+    const [start] = lastMonthBounds(moment);
+    return {
+      title: "Last month analytics",
+      subtitle: `Hours by category · ${monthLabel(start)}`,
+    };
+  }
+  if (range === "month") {
+    return {
+      title: "Monthly analytics",
+      subtitle: `Hours by category · ${monthLabel(moment)}`,
+    };
+  }
+  return {
+    title: "Weekly analytics",
+    subtitle: "Hours by category this week",
+  };
+}
+
 function renderAnalytics() {
+  const moment = now();
   const rows = analyticsRows(state.analyticsRange);
   const total = rows.reduce((sum, row) => sum + row.seconds, 0);
-  const isMonth = state.analyticsRange === "month";
-  document.getElementById("analyticsTitle").textContent = isMonth ? "Monthly analytics" : "Weekly analytics";
-  document.getElementById("analyticsSubtitle").textContent = isMonth
-    ? "Hours by category this month"
-    : "Hours by category this week";
+  const copy = analyticsCopy(state.analyticsRange, moment);
+  document.getElementById("analyticsTitle").textContent = copy.title;
+  document.getElementById("analyticsSubtitle").textContent = copy.subtitle;
   document.getElementById("analyticsTotal").textContent = formatHours(total);
   document.querySelectorAll("[data-analytics-range]").forEach((button) => {
     button.classList.toggle("active", button.dataset.analyticsRange === state.analyticsRange);
@@ -519,7 +550,8 @@ function confirmDelete() {
 }
 
 function setAnalyticsRange(range) {
-  state.analyticsRange = range === "month" ? "month" : "week";
+  if (range === "last_month" || range === "month") state.analyticsRange = range;
+  else state.analyticsRange = "week";
   if (document.getElementById("analyticsSheet").classList.contains("open")) renderAnalytics();
 }
 

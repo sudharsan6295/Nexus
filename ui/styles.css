@@ -406,6 +406,11 @@ textarea {
   gap: 6px;
   margin-bottom: 12px;
 }
+.range-tabs .ghost {
+  flex: 1;
+  padding-inline: 8px;
+  font-size: 12px;
+}
 .analytics-total {
   font-size: 28px;
   font-weight: 700;
